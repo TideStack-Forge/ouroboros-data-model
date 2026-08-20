@@ -1,24 +1,23 @@
-# Adapter Integration Guide
+# Adapter 接入指南
 
-Ouroboros Data Model keeps the public core platform-neutral. Runtime behavior
-is supplied by adapters through public contracts instead of internal platform
-dependencies.
+Ouroboros Data Model 的公开 core 保持平台中立。运行时行为通过公开 contract 由 adapter 提供，而不是依赖内部平台模块。
 
-## Adapter Points
+English documentation: [`adapter-integration-guide.en.md`](adapter-integration-guide.en.md)
 
-| Adapter point | Public contract | Required when | Integration approach |
+## Adapter 点位
+
+| Adapter 点位 | 公开 contract | 何时需要 | 接入方式 |
 | --- | --- | --- | --- |
-| Expression evaluation | `com.ouroboros.data.expression.DataExpressionEvaluator` | Default values, coding primary keys or plugins evaluate expressions. | Provide an SPI implementation in `META-INF/services/com.ouroboros.data.expression.DataExpressionEvaluator`. Keep the expression engine dependency in the adapter module. |
-| Data station/runtime | `com.ouroboros.data.model.DataStation` and related model contracts | Applications need to execute model CRUD/query behavior. | Build a runtime module that wires a station implementation to storage, transactions and application lifecycle outside the public core. |
-| SQL migration | `com.ouroboros.data.migration.SqlMigrationService` | Applications need schema changes from data model metadata. | Depend on `ouroboros-data-sql-migration` and invoke migration services from the application's deployment/runtime layer. |
-| Coding primary-key sequence | `com.ouroboros.data.pkgenerator.CodingSequencer` | `ouroboros-data-pkgen-coding` templates use `<0001>` or named sequences. | Provide a sequencer backed by your storage or sequence service and inject it into `FixLengthCodingGeneratorFactory`. |
-| Typed metadata generation | `ouroboros-data-typed-core` annotations plus `ouroboros-data-typed-meta-processor` | Projects want compile-time generation of data model metadata from typed Java classes. | Add the processor to annotation processing and commit generated metadata only when it is part of your public source policy. |
-| Test fixtures | `ouroboros-data-test-support` | Public adapters need repeatable tests without platform runtime glue. | Use public fixtures and H2/Spring test support; do not import internal monorepo test modules. |
+| 表达式求值 | `com.ouroboros.data.expression.DataExpressionEvaluator` | 默认值、编码主键或插件需要计算表达式。 | 在 `META-INF/services/com.ouroboros.data.expression.DataExpressionEvaluator` 注册 SPI 实现，把具体表达式引擎留在 adapter 模块。 |
+| Data station/runtime | `com.ouroboros.data.model.DataStation` 及相关模型 contract | 应用需要执行模型 CRUD/query 行为。 | 在公开 core 外构建 runtime 模块，把 station 实现接到存储、事务和应用生命周期。 |
+| SQL migration | `com.ouroboros.data.migration.SqlMigrationService` | 应用需要根据数据模型元数据变更 schema。 | 依赖 `ouroboros-data-sql-migration`，由应用部署/runtime 层调用迁移服务。 |
+| 编码主键序列 | `com.ouroboros.data.pkgenerator.CodingSequencer` | `ouroboros-data-pkgen-coding` 模板使用 `<0001>` 或命名序列。 | 提供基于存储或序列服务的 sequencer，并注入 `FixLengthCodingGeneratorFactory`。 |
+| Typed metadata 生成 | `ouroboros-data-typed-core` annotation 与 `ouroboros-data-typed-meta-processor` | 项目希望从 typed Java class 编译期生成数据模型元数据。 | 配置 annotation processor；仅在公开源码策略要求时提交生成元数据。 |
+| 测试 fixture | `ouroboros-data-test-support` | 公开 adapter 需要不依赖平台 runtime glue 的可重复测试。 | 使用公开 fixture 与 H2/Spring 测试支撑，不导入内部 monorepo 测试模块。 |
 
-## Expression Adapter
+## 表达式 Adapter
 
-Implement `DataExpressionEvaluator` when an application needs a concrete
-expression language. The public modules only know the port:
+应用需要具体表达式语言时，实现 `DataExpressionEvaluator`。公开模块只依赖端口：
 
 ```java
 public final class MyExpressionEvaluator implements DataExpressionEvaluator {
@@ -29,20 +28,16 @@ public final class MyExpressionEvaluator implements DataExpressionEvaluator {
 }
 ```
 
-Register the implementation:
+注册文件：
 
 ```text
 META-INF/services/com.ouroboros.data.expression.DataExpressionEvaluator
 ```
 
-## Coding Primary-Key Adapter
+## 编码主键 Adapter
 
-`ouroboros-data-pkgen-coding` parses templates and delegates sequence state to
-`CodingSequencer`. Keep persistence, distributed locks and tenant-specific
-sequence policies in your adapter.
+`ouroboros-data-pkgen-coding` 负责解析模板，并把序列状态委托给 `CodingSequencer`。持久化、分布式锁和租户级序列策略应保留在 adapter 中。
 
-## Runtime Boundary
+## Runtime 边界
 
-Public modules should not depend on platform lifecycle, security, script or app
-modules. Put those concerns in an adapter that consumes public contracts and can
-be tested independently.
+公开模块不依赖平台生命周期、安全、脚本或 app 模块。相关能力应放在消费公开 contract 的 adapter 中，并可独立测试。

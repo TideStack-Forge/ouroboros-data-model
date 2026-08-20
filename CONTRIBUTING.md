@@ -1,32 +1,27 @@
-# Contributing to Ouroboros Data Model
+# 参与贡献 Ouroboros Data Model
 
-Thank you for improving the public data model project. This repository is a
-public projection of the internal Ouroboros monorepo, so maintainers import
-accepted changes back through the manifest-scoped sync workflow.
+感谢你改进公开数据模型项目。本仓库是内部 Ouroboros monorepo 的公开投影，维护者会通过 manifest 作用域同步流程把被接受的变更回流到内部仓库。
 
-## Development Baseline
+English documentation: [`CONTRIBUTING.en.md`](CONTRIBUTING.en.md)
 
-- Java 21 is required.
-- Run `mvn -Ppublic -pl core/ouroboros-data -am test` before submitting a change.
-- Keep public modules free of platform imports such as security, lifecycle,
-  script, application, or internal runtime glue.
-- Add or update tests for behavioral changes.
+## 开发基线
 
-## Public Boundary Rules
+- 需要 Java 21。
+- 提交前运行 `mvn -Ppublic -pl core/ouroboros-data -am test`。
+- 公开模块不得引入 security、lifecycle、script、application 或内部 runtime glue 等平台依赖。
+- 行为变更必须新增或更新测试。
 
-- Use `DataExpressionEvaluator` from `ouroboros-data-core` for expression needs;
-  do not depend on a concrete expression engine from a platform module.
-- Keep DB-backed sequence implementations, snowflake adapters and platform
-  lifecycle bridges outside `data-pkgen-coding`.
-- Keep runtime/application adapters out of core, SQL, typed, builder and test
-  support modules.
-- Do not add generated files, local build output, private metadata or internal
-  repository paths.
+## 公开边界规则
 
-## Pull Request Checklist
+- 表达式能力通过 `ouroboros-data-core` 的 `DataExpressionEvaluator` 端口接入，不依赖具体平台表达式引擎。
+- DB 序列实现、雪花算法适配器和平台生命周期桥接不得放入 `data-pkgen-coding`。
+- runtime/application adapter 不进入 core、SQL、typed、builder 和 test-support 公开模块。
+- 不提交生成产物、本地构建输出、私有元数据或内部仓库路径。
 
-- [ ] The change is limited to public modules or public documentation.
-- [ ] `mvn -Ppublic -pl core/ouroboros-data -am test` passes.
-- [ ] No internal platform imports were added.
-- [ ] Contributions are signed off with DCO.
-- [ ] Public documentation was updated for API or adapter behavior changes.
+## Pull Request 检查清单
+
+- [ ] 变更只触及公开模块或公开文档。
+- [ ] `mvn -Ppublic -pl core/ouroboros-data -am test` 通过。
+- [ ] 没有新增内部平台 import。
+- [ ] 提交带有 DCO sign-off。
+- [ ] API 或 adapter 行为变化已更新公开文档。

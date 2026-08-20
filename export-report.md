@@ -3,7 +3,7 @@
 ## Summary
 
 - Status: passed
-- Generated at: `2026-08-20T11:35:05.709928+00:00`
+- Generated at: `2026-08-20T12:02:50.512607+00:00`
 - Mode: `sync`
 - Dry run flag: `False`
 - Source ref recorded in public tree: `false`
@@ -76,7 +76,7 @@
 #### stdout tail
 
 ```text
-/target/jacoco.exec
+ingual/target/jacoco.exec
 [INFO] 
 [INFO] <<< source:3.4.0:jar (default) < generate-sources @ ouroboros-root <<<
 [INFO] 
@@ -127,13 +127,13 @@
 [INFO] ------------------------------------------------------------------------
 [INFO] Reactor Summary for Ouroboros Root 2.0.0-rc.1-SNAPSHOT:
 [INFO] 
-[INFO] Ouroboros Root ..................................... SUCCESS [  7.342 s]
-[INFO] Ouroboros Data ..................................... SUCCESS [  0.935 s]
+[INFO] Ouroboros Root ..................................... SUCCESS [ 58.841 s]
+[INFO] Ouroboros Data ..................................... SUCCESS [  9.535 s]
 [INFO] ------------------------------------------------------------------------
 [INFO] BUILD SUCCESS
 [INFO] ------------------------------------------------------------------------
-[INFO] Total time:  9.865 s
-[INFO] Finished at: 2026-08-20T19:33:47+08:00
+[INFO] Total time:  01:23 min
+[INFO] Finished at: 2026-08-20T20:00:28+08:00
 [INFO] ------------------------------------------------------------------------
 
 ```
@@ -153,7 +153,7 @@ NOTE: Picked up JDK_JAVA_OPTIONS: -javaagent:$HOME/.m2/repository/org/mockito/mo
 #### stdout tail
 
 ```text
-查……
+NFO] 开始检查……
 检查完成。
 [INFO] You have 0 Checkstyle violations.
 [INFO] 
@@ -185,22 +185,22 @@ NOTE: Picked up JDK_JAVA_OPTIONS: -javaagent:$HOME/.m2/repository/org/mockito/mo
 [INFO] ------------------------------------------------------------------------
 [INFO] Reactor Summary for Ouroboros Root 2.0.0-rc.1-SNAPSHOT:
 [INFO] 
-[INFO] Ouroboros Root ..................................... SUCCESS [  5.413 s]
-[INFO] Ouroboros Data ..................................... SUCCESS [  0.814 s]
-[INFO] Ouroboros Data Core ................................ SUCCESS [ 39.198 s]
-[INFO] Ouroboros Data Typed Core .......................... SUCCESS [  5.314 s]
-[INFO] Ouroboros Data Plugins ............................. SUCCESS [  6.968 s]
-[INFO] Ouroboros Data Typed Meta Processor ................ SUCCESS [  1.455 s]
-[INFO] Ouroboros Data SQL Migration ....................... SUCCESS [  2.086 s]
-[INFO] Ouroboros Data SQL ................................. SUCCESS [  6.293 s]
-[INFO] ouroboros-data-builders ............................ SUCCESS [  1.205 s]
-[INFO] ouroboros-data-test-support ........................ SUCCESS [  1.372 s]
-[INFO] ouroboros-data-pkgen-coding ........................ SUCCESS [  3.666 s]
+[INFO] Ouroboros Root ..................................... SUCCESS [ 13.575 s]
+[INFO] Ouroboros Data ..................................... SUCCESS [  1.352 s]
+[INFO] Ouroboros Data Core ................................ SUCCESS [01:00 min]
+[INFO] Ouroboros Data Typed Core .......................... SUCCESS [  5.789 s]
+[INFO] Ouroboros Data Plugins ............................. SUCCESS [  9.764 s]
+[INFO] Ouroboros Data Typed Meta Processor ................ SUCCESS [  2.091 s]
+[INFO] Ouroboros Data SQL Migration ....................... SUCCESS [  2.540 s]
+[INFO] Ouroboros Data SQL ................................. SUCCESS [ 10.261 s]
+[INFO] ouroboros-data-builders ............................ SUCCESS [  2.147 s]
+[INFO] ouroboros-data-test-support ........................ SUCCESS [  1.881 s]
+[INFO] ouroboros-data-pkgen-coding ........................ SUCCESS [  6.869 s]
 [INFO] ------------------------------------------------------------------------
 [INFO] BUILD SUCCESS
 [INFO] ------------------------------------------------------------------------
-[INFO] Total time:  01:14 min
-[INFO] Finished at: 2026-08-20T19:35:05+08:00
+[INFO] Total time:  02:00 min
+[INFO] Finished at: 2026-08-20T20:02:49+08:00
 [INFO] ------------------------------------------------------------------------
 
 ```
@@ -228,13 +228,18 @@ NOTE: Picked up JDK_JAVA_OPTIONS: -javaagent:$HOME/.m2/repository/org/mockito/mo
 ## Public Metadata, CI, And Release Gates
 
 - README generated: `true`
+- English README generated: `true`
 - Apache-2.0 LICENSE generated: `true`
 - NOTICE generated: `true`
 - CONTRIBUTING generated: `true`
+- English CONTRIBUTING generated: `true`
 - Public CI template generated: `true`
 - API docs entry generated: `true`
+- English API docs entry generated: `true`
 - Adapter integration guide generated: `true`
+- English adapter integration guide generated: `true`
 - Minimal example generated: `true`
+- English minimal example generated: `true`
 - Release gate report: `release-gate-report.md`
 - Release gate result: `passed`
 - Sensitive content matches: `0`

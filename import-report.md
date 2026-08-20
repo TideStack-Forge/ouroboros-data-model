@@ -3,7 +3,7 @@
 ## Summary
 
 - Status: `passed`
-- Generated at: `2026-08-20T11:37:12.469386+00:00`
+- Generated at: `2026-08-20T12:03:31.066215+00:00`
 - Public repo: `public-tree-local-fixture`
 - Public PR/ref: `fixture`
 - Public ref recorded in public tree: `false`
@@ -65,8 +65,5 @@
 ## Public Worktree Cleanliness
 
 ```text
-?? forbidden-import-report.md
-?? hardening-report.md
-?? import-report.md
-?? public-import-state.yaml
+clean
 ```

@@ -1,7 +1,8 @@
-# Minimal Dynamic Data Model Example
+# 最小动态数据模型示例
 
-This example is intentionally configuration-level so it can stay stable while
-the public API surface is finalized.
+这个示例刻意保持在配置层，便于在公开 API 边界继续稳定前保持可读。
+
+English documentation: [`minimal-data-model.en.md`](minimal-data-model.en.md)
 
 ```yaml
 dataModel:
@@ -23,5 +24,4 @@ query:
     display_name: Ada
 ```
 
-Use `ouroboros-data-core` for model metadata and contracts, and add a public
-runtime adapter only after the runtime split decision marks it as public.
+使用 `ouroboros-data-core` 承载模型元数据和 contract。runtime adapter 只有在 runtime split 决策进入公开范围后才应加入公开构建面。

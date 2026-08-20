@@ -1,7 +1,7 @@
 schema_version: 1
 roadmap: dynamic-data-model-open-source
 status: passed
-generated_at: "2026-08-20T11:37:12.469386+00:00"
+generated_at: "2026-08-20T12:03:31.066215+00:00"
 public_repo: public-tree-local-fixture
 public_pr: fixture
 target_branch: import-branch-dry-run
