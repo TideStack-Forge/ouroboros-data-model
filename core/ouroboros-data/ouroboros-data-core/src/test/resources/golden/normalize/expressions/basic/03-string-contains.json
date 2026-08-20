@@ -1,0 +1,10 @@
+{
+  "name": "字符串包含",
+  "description": "测试 {\"name\": {\"CONTAINS\": \"张\"}} 的规范化",
+  "input": {
+    "name": {
+      "CONTAINS": "张"
+    }
+  },
+  "scenario": "PLAIN_SQL"
+}

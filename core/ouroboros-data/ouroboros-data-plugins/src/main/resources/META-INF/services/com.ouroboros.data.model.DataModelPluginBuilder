@@ -1,0 +1,8 @@
+com.ouroboros.data.model.plugins.UpdateWhenDataChangeDataModelPlugin$Builder
+com.ouroboros.data.model.plugins.NormalizeWhereDataModelPlugin$Builder
+com.ouroboros.data.model.plugins.DuplicateDataCheckerDataModelPlugin$Builder
+com.ouroboros.data.model.plugins.ReferenceCheckerDataModelPlugin$Builder
+com.ouroboros.data.model.plugins.BasicAuditDataModelPlugin$Builder
+com.ouroboros.data.model.plugins.Scd2HistoryDataModelPlugin$Builder
+com.ouroboros.data.model.plugins.LogicalDeleteDataModelPlugin$Builder
+com.ouroboros.data.model.plugins.ArchiveDeleteDataModelPlugin$Builder

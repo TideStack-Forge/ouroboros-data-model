@@ -1,0 +1,10 @@
+{
+  "name": "空列表测试",
+  "description": "测试 IN 操作符使用空列表",
+  "input": {
+    "status": {
+      "$in": []
+    }
+  },
+  "scenario": "PLAIN_SQL"
+}

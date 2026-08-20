@@ -1,0 +1,17 @@
+{
+  "name": "NOT 与 AND 组合",
+  "description": "测试 NOT 与 AND 的组合",
+  "input": {
+    "$not": {
+      "$and": [
+        {
+          "status": "deleted"
+        },
+        {
+          "archived": true
+        }
+      ]
+    }
+  },
+  "scenario": "PLAIN_SQL"
+}

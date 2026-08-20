@@ -1,0 +1,563 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>com.ouroboros</groupId>
+    <artifactId>ouroboros-bom</artifactId>
+    <version>2.0.0-rc.1-SNAPSHOT</version>
+    <packaging>pom</packaging>
+
+    <name>Ouroboros BOM</name>
+    <description>Bill of Materials for Ouroboros project</description>
+
+    <properties>
+        <maven.compiler.source>21</maven.compiler.source>
+        <maven.compiler.target>21</maven.compiler.target>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+
+        <!-- Spring Boot BOM 版本 -->
+        <spring-boot.version>3.5.11</spring-boot.version>
+        <spring-cloud.version>2025.0.3</spring-cloud.version>
+        <spring-ai.version>2.0.0</spring-ai.version>
+
+        <!-- 第三方依赖版本 -->
+        <junit5.engine.version>5.12.2</junit5.engine.version>
+        <junit5.platform.version>1.12.2</junit5.platform.version>
+        <querydsl.version>5.1.0</querydsl.version>
+        <jsr305.version>3.0.2</jsr305.version>
+        <redisson.version>4.6.1</redisson.version>
+        <fabric8.kubernetes-client.version>7.8.0</fabric8.kubernetes-client.version>
+        <openai.java.version>4.43.0</openai.java.version>
+        <anthropic.java.version>2.48.0</anthropic.java.version>
+        <mcp.java.sdk.version>2.0.0</mcp.java.sdk.version>
+        <bouncycastle.version>1.85</bouncycastle.version>
+        <error-prone-annotations.version>2.50.0</error-prone-annotations.version>
+        <ouroboros.version>${project.version}</ouroboros.version>
+    </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <!-- Keep Fabric8's internal modules on the same line as the client dependency. -->
+            <dependency>
+                <groupId>io.fabric8</groupId>
+                <artifactId>kubernetes-client-bom</artifactId>
+                <version>${fabric8.kubernetes-client.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+
+            <!-- 导入 Spring Boot BOM -->
+            <dependency>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-dependencies</artifactId>
+                <version>${spring-boot.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+
+            <!-- Spring Cloud -->
+            <dependency>
+                <groupId>org.springframework.cloud</groupId>
+                <artifactId>spring-cloud-dependencies</artifactId>
+                <version>${spring-cloud.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.springframework.ai</groupId>
+                <artifactId>spring-ai-bom</artifactId>
+                <version>${spring-ai.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <!-- Spring AI 2.0.0 uses victools for model-side schema generation. This is not
+                 the project-side JSON Schema validation API; application validation should
+                 go through the project-approved JSON Schema validation helper. Pin these
+                 transitive versions so Maven Enforcer convergence remains deterministic. -->
+            <dependency>
+                <groupId>tools.jackson.core</groupId>
+                <artifactId>jackson-core</artifactId>
+                <version>3.1.4</version>
+            </dependency>
+            <dependency>
+                <groupId>tools.jackson.core</groupId>
+                <artifactId>jackson-databind</artifactId>
+                <version>3.1.4</version>
+            </dependency>
+            <dependency>
+                <groupId>com.fasterxml.jackson.core</groupId>
+                <artifactId>jackson-annotations</artifactId>
+                <version>2.21</version>
+            </dependency>
+            <dependency>
+                <groupId>com.github.victools</groupId>
+                <artifactId>jsonschema-generator</artifactId>
+                <version>5.0.0</version>
+            </dependency>
+            <dependency>
+                <groupId>com.github.victools</groupId>
+                <artifactId>jsonschema-module-jackson</artifactId>
+                <version>5.0.0</version>
+            </dependency>
+            <dependency>
+                <groupId>com.github.victools</groupId>
+                <artifactId>jsonschema-module-swagger-2</artifactId>
+                <version>5.0.0</version>
+            </dependency>
+            <!-- Spring AI provider SDKs can lag behind newer platform dependencies on
+                 error-prone annotations. Pin the harmless annotation artifact centrally
+                 so mothership's real provider starter assembly remains convergent. -->
+            <dependency>
+                <groupId>com.google.errorprone</groupId>
+                <artifactId>error_prone_annotations</artifactId>
+                <version>${error-prone-annotations.version}</version>
+            </dependency>
+            <!-- QueryDSL -->
+            <dependency>
+                <groupId>com.querydsl</groupId>
+                <artifactId>querydsl-core</artifactId>
+                <version>${querydsl.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.querydsl</groupId>
+                <artifactId>querydsl-sql</artifactId>
+                <version>${querydsl.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.querydsl</groupId>
+                <artifactId>querydsl-sql-spring</artifactId>
+                <version>${querydsl.version}</version>
+            </dependency>
+
+            <!-- 数据源 & 数据库驱动 -->
+            <dependency>
+                <groupId>com.alibaba</groupId>
+                <artifactId>druid</artifactId>
+                <version>1.2.28</version>
+            </dependency>
+            <dependency>
+                <groupId>com.alibaba</groupId>
+                <artifactId>druid-spring-boot-3-starter</artifactId>
+                <version>1.2.28</version>
+            </dependency>
+            <dependency>
+                <groupId>com.h2database</groupId>
+                <artifactId>h2</artifactId>
+                <version>2.4.240</version>
+            </dependency>
+            <dependency>
+                <groupId>com.mysql</groupId>
+                <artifactId>mysql-connector-j</artifactId>
+                <version>9.7.0</version>
+            </dependency>
+            <dependency>
+                <groupId>com.microsoft.sqlserver</groupId>
+                <artifactId>mssql-jdbc</artifactId>
+                <version>13.4.0.jre11</version>
+            </dependency>
+
+            <!-- Liquibase -->
+            <dependency>
+                <groupId>org.liquibase</groupId>
+                <artifactId>liquibase-core</artifactId>
+                <version>4.31.1</version>
+            </dependency>
+
+            <!-- 脚本支持 -->
+            <dependency>
+                <groupId>org.apache.groovy</groupId>
+                <artifactId>groovy</artifactId>
+                <version>4.0.30</version>
+            </dependency>
+            <dependency>
+                <groupId>org.codehaus.groovy</groupId>
+                <artifactId>groovy</artifactId>
+                <version>3.0.25</version>
+            </dependency>
+            <dependency>
+                <groupId>org.codehaus.groovy</groupId>
+                <artifactId>groovy-all</artifactId>
+                <version>3.0.25</version>
+                <type>pom</type>
+            </dependency>
+
+            <!-- Jakarta EE coordinates used by Boot 3.5 migrated modules. -->
+            <dependency>
+                <groupId>jakarta.annotation</groupId>
+                <artifactId>jakarta.annotation-api</artifactId>
+                <version>2.1.1</version>
+            </dependency>
+            <dependency>
+                <groupId>jakarta.servlet</groupId>
+                <artifactId>jakarta.servlet-api</artifactId>
+                <version>6.0.0</version>
+            </dependency>
+            <dependency>
+                <groupId>jakarta.validation</groupId>
+                <artifactId>jakarta.validation-api</artifactId>
+                <version>3.0.2</version>
+            </dependency>
+            <dependency>
+                <groupId>org.mockito</groupId>
+                <artifactId>mockito-inline</artifactId>
+                <version>5.2.0</version>
+            </dependency>
+
+            <!-- Utils -->
+            <dependency>
+                <groupId>org.apache.commons</groupId>
+                <artifactId>commons-lang3</artifactId>
+                <version>3.20.0</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.commons</groupId>
+                <artifactId>commons-collections4</artifactId>
+                <version>4.4</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.commons</groupId>
+                <artifactId>commons-text</artifactId>
+                <version>1.15.0</version>
+            </dependency>
+            <dependency>
+                <groupId>commons-beanutils</groupId>
+                <artifactId>commons-beanutils</artifactId>
+                <version>1.11.0</version>
+            </dependency>
+            <dependency>
+                <groupId>commons-io</groupId>
+                <artifactId>commons-io</artifactId>
+                <version>2.22.0</version>
+            </dependency>
+            <dependency>
+                <groupId>com.google.code.findbugs</groupId>
+                <artifactId>jsr305</artifactId>
+                <version>${jsr305.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.slf4j</groupId>
+                <artifactId>slf4j-api</artifactId>
+                <version>2.0.17</version>
+            </dependency>
+            <dependency>
+                <groupId>io.vavr</groupId>
+                <artifactId>vavr</artifactId>
+                <version>0.10.4</version>
+            </dependency>
+            <dependency>
+                <groupId>com.networknt</groupId>
+                <artifactId>json-schema-validator</artifactId>
+                <version>3.0.6</version>
+            </dependency>
+
+            <dependency>
+                <groupId>io.swagger.core.v3</groupId>
+                <artifactId>swagger-annotations</artifactId>
+                <version>2.2.52</version>
+            </dependency>
+
+            <dependency>
+                <groupId>joda-time</groupId>
+                <artifactId>joda-time</artifactId>
+                <version>2.14.2</version>
+            </dependency>
+            <dependency>
+                <groupId>jakarta.xml.bind</groupId>
+                <artifactId>jakarta.xml.bind-api</artifactId>
+                <version>4.0.2</version>
+            </dependency>
+            <dependency>
+                <groupId>org.bouncycastle</groupId>
+                <artifactId>bcprov-jdk18on</artifactId>
+                <version>${bouncycastle.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.bouncycastle</groupId>
+                <artifactId>bcpkix-jdk18on</artifactId>
+                <version>${bouncycastle.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.bouncycastle</groupId>
+                <artifactId>bcutil-jdk18on</artifactId>
+                <version>${bouncycastle.version}</version>
+            </dependency>
+
+            <!-- 模版引擎 -->
+            <dependency>
+                <groupId>org.freemarker</groupId>
+                <artifactId>freemarker</artifactId>
+                <version>2.3.34</version>
+            </dependency>
+
+            <!-- 启用Java 21 编译基线 -->
+
+            <dependency>
+                <groupId>org.apache.commons</groupId>
+                <artifactId>commons-compress</artifactId>
+                <version>1.28.0</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.maven</groupId>
+                <artifactId>maven-artifact</artifactId>
+                <version>3.9.11</version>
+            </dependency>
+
+            <!-- ouroboros包版本管理 -->
+            <!-- 支持包 -->
+
+            <!-- 公共包 -->
+
+            <!-- Redisson -->
+            <dependency>
+                <groupId>org.redisson</groupId>
+                <artifactId>redisson</artifactId>
+                <version>${redisson.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.redisson</groupId>
+                <artifactId>redisson-spring-data-35</artifactId>
+                <version>${redisson.version}</version>
+            </dependency>
+
+            <!-- 应用模块 -->
+
+            <!-- 审批流 -->
+
+            <!-- 业务模型 -->
+
+            <!-- I18n -->
+
+            <!-- 数据模型 -->
+            <dependency>
+                <groupId>com.ouroboros</groupId>
+                <artifactId>ouroboros-data-core</artifactId>
+                <version>${ouroboros.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.ouroboros</groupId>
+                <artifactId>ouroboros-data-plugins</artifactId>
+                <version>${ouroboros.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.ouroboros</groupId>
+                <artifactId>ouroboros-data-typed-core</artifactId>
+                <version>${ouroboros.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.ouroboros</groupId>
+                <artifactId>ouroboros-data-sql</artifactId>
+                <version>${ouroboros.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.ouroboros</groupId>
+                <artifactId>ouroboros-data-sql-migration</artifactId>
+                <version>${ouroboros.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.ouroboros</groupId>
+                <artifactId>ouroboros-data-builders</artifactId>
+                <version>${ouroboros.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.ouroboros</groupId>
+                <artifactId>ouroboros-data-pkgen-coding</artifactId>
+                <version>${ouroboros.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.ouroboros</groupId>
+                <artifactId>ouroboros-data-test-support</artifactId>
+                <version>${ouroboros.version}</version>
+            </dependency>
+
+            <!-- 统计分析与综合查询 -->
+
+            <!-- 字段类型 -->
+
+            <!-- 逻辑流 -->
+
+            <!-- 菜单模型 -->
+
+            <!-- UI模型 -->
+
+            <!-- WEB-API模型 -->
+
+            <!-- 资源管理包 -->
+
+            <!-- 安全包 -->
+
+            <!-- 动态表单 -->
+
+            <!-- 自定义UI -->
+
+            <!-- 文档管理 -->
+
+            <!-- 能力包 -->
+
+            <!-- 应用运行时聚合 -->
+
+            <!-- 配置模块 -->
+
+            <!-- 数据字典 -->
+
+            <!-- 文件上传 -->
+
+            <!-- 通知模块 -->
+            <dependency>
+                <groupId>com.aliyun</groupId>
+                <artifactId>tea-util</artifactId>
+                <version>0.2.13</version>
+            </dependency>
+            <dependency>
+                <groupId>com.aliyun</groupId>
+                <artifactId>endpoint-util</artifactId>
+                <version>0.0.6</version>
+            </dependency>
+
+            <!-- 组织架构 -->
+
+            <!-- 平台组件库 -->
+
+            <!-- AI能力包 -->
+
+            <!-- RPC模型 -->
+
+            <!-- 消息队列 -->
+
+            <!-- Websocket -->
+
+            <!-- BusinessLog -->
+
+            <!-- AI 过渡期三方依赖 -->
+            <dependency>
+                <groupId>com.openai</groupId>
+                <artifactId>openai-java</artifactId>
+                <version>${openai.java.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.anthropic</groupId>
+                <artifactId>anthropic-java</artifactId>
+                <version>${anthropic.java.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.modelcontextprotocol.sdk</groupId>
+                <artifactId>mcp</artifactId>
+                <version>${mcp.java.sdk.version}</version>
+            </dependency>
+
+            <!-- 计划任务 -->
+
+            <!-- 用户设置 -->
+
+            <!-- 小组件 -->
+
+            <!-- 全部开发应用管理 -->
+
+            <!-- 开发应用管理 -->
+
+            <!-- 开发容器 -->
+
+            <!-- 开发模型管理WEB-API脚手架 -->
+
+            <!-- VCS管理 -->
+
+            <!-- Test -->
+            <dependency>
+                <groupId>org.junit.platform</groupId>
+                <artifactId>junit-platform-launcher</artifactId>
+                <version>${junit5.platform.version}</version>
+                <scope>test</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.junit.jupiter</groupId>
+                <artifactId>junit-jupiter-engine</artifactId>
+                <version>${junit5.engine.version}</version>
+                <scope>test</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.junit.vintage</groupId>
+                <artifactId>junit-vintage-engine</artifactId>
+                <version>${junit5.engine.version}</version>
+                <scope>test</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <!-- 添加插件管理 -->
+    <build>
+        <pluginManagement>
+            <plugins>
+                <!-- Maven 核心插件 -->
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-compiler-plugin</artifactId>
+                    <version>3.15.0</version>
+                    <configuration>
+                        <parameters>true</parameters>
+                    </configuration>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-surefire-plugin</artifactId>
+                    <version>3.5.6</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-failsafe-plugin</artifactId>
+                    <version>3.5.6</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-dependency-plugin</artifactId>
+                    <version>3.11.0</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-source-plugin</artifactId>
+                    <version>3.4.0</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-javadoc-plugin</artifactId>
+                    <version>3.12.0</version>
+                </plugin>
+
+                <!-- Spring Boot 插件 -->
+                <plugin>
+                    <groupId>org.springframework.boot</groupId>
+                    <artifactId>spring-boot-maven-plugin</artifactId>
+                    <version>${spring-boot.version}</version>
+                </plugin>
+
+                <!-- 其他常用插件 -->
+                <plugin>
+                    <groupId>org.codehaus.mojo</groupId>
+                    <artifactId>versions-maven-plugin</artifactId>
+                    <version>2.21.0</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.codehaus.mojo</groupId>
+                    <artifactId>flatten-maven-plugin</artifactId>
+                    <version>1.7.3</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.codehaus.gmavenplus</groupId>
+                    <artifactId>gmavenplus-plugin</artifactId>
+                    <version>5.1.0</version>
+                </plugin>
+            </plugins>
+        </pluginManagement>
+    </build>
+
+    <distributionManagement>
+        <repository>
+            <id>releases</id>
+            <url>${deploy.release.url}</url>
+        </repository>
+        <snapshotRepository>
+            <id>snapshots</id>
+            <url>${deploy.snapshot.url}</url>
+        </snapshotRepository>
+    </distributionManagement>
+</project>

@@ -1,0 +1,19 @@
+{
+  "name": "大于和小于操作符",
+  "description": "测试 $gt 和 $lt 操作符",
+  "input": {
+    "$and": [
+      {
+        "age": {
+          "$gt": 18
+        }
+      },
+      {
+        "age": {
+          "$lt": 60
+        }
+      }
+    ]
+  },
+  "scenario": "PLAIN_SQL"
+}

@@ -1,0 +1,3 @@
+com.ouroboros.data.validation.rules.NotEmpty
+com.ouroboros.data.validation.rules.NotNull
+com.ouroboros.data.validation.rules.RegexPattern

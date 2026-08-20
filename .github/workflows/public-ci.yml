@@ -1,0 +1,33 @@
+name: Public CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  public-profile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+      - name: Resolve Mockito javaagent
+        run: |
+          mkdir -p target
+          mvn -q -Ppublic -pl core/ouroboros-data/ouroboros-data-core -am -DincludeScope=test -Dmdep.outputFile=target/public-test-classpath.txt dependency:build-classpath
+          python3 - <<'PY'
+          import os
+          entries = open("target/public-test-classpath.txt", encoding="utf-8").read().split(os.pathsep)
+          agents = [entry for entry in entries if "/org/mockito/mockito-core/" in entry and entry.endswith(".jar")]
+          if not agents:
+              raise SystemExit("mockito-core jar not found")
+          with open(os.environ["GITHUB_ENV"], "a", encoding="utf-8") as env:
+              env.write("JDK_JAVA_OPTIONS=-javaagent:" + agents[-1] + "\n")
+          PY
+      - name: Run public profile smoke test
+        run: mvn -Ppublic -pl core/ouroboros-data -am test
+      - name: Package manifest-selected public modules
+        run: mvn -Ppublic -pl core/ouroboros-data/ouroboros-data-core,core/ouroboros-data/ouroboros-data-plugins,core/ouroboros-data/ouroboros-data-typed-core,core/ouroboros-data/ouroboros-data-typed-meta-processor,core/ouroboros-data/ouroboros-data-sql,core/ouroboros-data/ouroboros-data-sql-migration,core/ouroboros-data/ouroboros-data-builders,core/ouroboros-data/ouroboros-data-test-support,core/ouroboros-data/ouroboros-data-pkgen-coding -am -DskipTests package

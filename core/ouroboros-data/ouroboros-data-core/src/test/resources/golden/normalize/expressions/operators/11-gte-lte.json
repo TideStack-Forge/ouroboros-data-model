@@ -1,0 +1,19 @@
+{
+  "name": "大于等于和小于等于操作符",
+  "description": "测试 $gte 和 $lte 操作符",
+  "input": {
+    "$and": [
+      {
+        "age": {
+          "$gte": 18
+        }
+      },
+      {
+        "age": {
+          "$lte": 60
+        }
+      }
+    ]
+  },
+  "scenario": "PLAIN_SQL"
+}

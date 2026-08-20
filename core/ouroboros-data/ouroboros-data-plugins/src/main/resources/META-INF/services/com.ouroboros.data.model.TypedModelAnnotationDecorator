@@ -1,0 +1,6 @@
+com.ouroboros.data.model.decorators.typed.AuditFieldsAnnotationDecorator
+com.ouroboros.data.model.decorators.typed.LogicalDeleteAnnotationDecorator
+com.ouroboros.data.model.decorators.typed.Scd2HistoryAnnotationDecorator
+com.ouroboros.data.model.decorators.typed.ArchiveDeleteAnnotationDecorator
+com.ouroboros.data.model.decorators.typed.DataPluginAnnotationDecorator
+com.ouroboros.data.model.decorators.typed.UniqueConstraintAnnotationDecorator

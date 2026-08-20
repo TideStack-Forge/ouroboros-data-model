@@ -1,0 +1,24 @@
+{
+  "name": "嵌套逻辑组合",
+  "description": "测试嵌套的 AND/OR 组合",
+  "input": {
+    "$and": [
+      {
+        "age": {
+          "$gte": 18
+        }
+      },
+      {
+        "$or": [
+          {
+            "city": "北京"
+          },
+          {
+            "city": "上海"
+          }
+        ]
+      }
+    ]
+  },
+  "scenario": "PLAIN_SQL"
+}

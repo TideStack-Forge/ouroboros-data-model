@@ -1,0 +1,13 @@
+{
+  "name": "BETWEEN 操作符",
+  "description": "测试 $between 操作符",
+  "input": {
+    "age": {
+      "$between": [
+        18,
+        60
+      ]
+    }
+  },
+  "scenario": "PLAIN_SQL"
+}

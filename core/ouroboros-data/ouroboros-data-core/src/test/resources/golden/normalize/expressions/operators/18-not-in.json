@@ -1,0 +1,13 @@
+{
+  "name": "NOT IN 操作符",
+  "description": "测试 $nin (not in) 操作符",
+  "input": {
+    "status": {
+      "$nin": [
+        "deleted",
+        "archived"
+      ]
+    }
+  },
+  "scenario": "PLAIN_SQL"
+}

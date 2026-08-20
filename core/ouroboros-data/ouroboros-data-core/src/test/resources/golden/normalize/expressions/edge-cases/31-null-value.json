@@ -1,0 +1,8 @@
+{
+  "name": "Null 值测试",
+  "description": "测试字段值为 null 的处理",
+  "input": {
+    "deletedAt": null
+  },
+  "scenario": "PLAIN_SQL"
+}

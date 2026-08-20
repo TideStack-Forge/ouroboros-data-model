@@ -1,0 +1,14 @@
+{
+  "name": "IN 和 NOT IN 操作符",
+  "description": "测试 $in 和 $nin 操作符",
+  "input": {
+    "status": {
+      "$in": [
+        "active",
+        "pending",
+        "approved"
+      ]
+    }
+  },
+  "scenario": "PLAIN_SQL"
+}

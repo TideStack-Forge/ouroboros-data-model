@@ -1,0 +1,10 @@
+{
+  "name": "字符串开头匹配",
+  "description": "测试 $startsWith 操作符",
+  "input": {
+    "name": {
+      "$startsWith": "张"
+    }
+  },
+  "scenario": "PLAIN_SQL"
+}

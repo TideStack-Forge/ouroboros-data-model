@@ -1,0 +1,36 @@
+{
+  "name": "编码主键",
+  "label": "编码主键",
+  "order": 20,
+  "isPrimaryKeyType": true,
+  "primaryKeyGenerator": "coding:${template}",
+  "dataType": {
+    "type": "String",
+    "size": "${size}"
+  },
+  "ui": {
+    "input": {
+      "type": "input-text"
+    },
+    "display": {
+      "type": "static-text"
+    }
+  },
+  "validations": {},
+  "paramsUiSchema": [
+    {
+      "type": "input-number",
+      "name": "size",
+      "label": "长度",
+      "value": 20
+    },
+    {
+      "type": "input-text",
+      "name": "template",
+      "label": "编码模版",
+      "value": "{yyyyMMdd}<0001>",
+      "required": true,
+      "description": "如：<b>前缀{yyyyMMdd}-&lt;0001&gt;</b> 会输出：前缀${now()|date:YYYYMMDD}-0001<br>其中：<p>- <b>{yyyyMMdd}</b> 表示年月日<i>(<a href='https://docs.oracle.com/javase/8/docs/api/java/time/format/DateTimeFormatter.html#patterns' target='_BLANK'>DateTimeFormatter</a>的格式化字符串)</i>；</p><p>- 支持嵌入SpEL表达式，表达式以\\${}包裹，在表达式中可以取数据字段进行计算输出；</p><p>- <b>&lt;0001&gt;</b> 表示4位序列号，以1开始，默认步长为1；</p><p>- 若要指定步长，使用 <b>&lt;0001,2&gt;</b> 表示以1开始，步长为2；</p><p>- 序列号默认以模版中其他部件为序列器名进行递增生成；</p><p>- 支持指定序列器名 <b>&lt;序列器名:0001&gt;</b></p><p>- 支持表达式序列器名：<b>&lt;\\${表达式}:0001&gt;</b>。</p>"
+    }
+  ]
+}

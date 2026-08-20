@@ -1,0 +1,8 @@
+{
+  "name": "空 Map 测试",
+  "description": "测试空 Map 的处理",
+  "input": {},
+  "scenario": "PLAIN_SQL",
+  "skip": true,
+  "skipReason": "空 Map 可能导致不同实现有不同行为"
+}

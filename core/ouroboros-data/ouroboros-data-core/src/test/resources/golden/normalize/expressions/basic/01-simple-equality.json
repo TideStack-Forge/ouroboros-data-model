@@ -1,0 +1,8 @@
+{
+  "name": "简单等值比较",
+  "description": "测试 {\"name\": \"张三\"} 的规范化",
+  "input": {
+    "name": "张三"
+  },
+  "scenario": "PLAIN_SQL"
+}

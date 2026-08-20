@@ -1,0 +1,46 @@
+# 所有操作符不区分大小写
+AND: AND, &&
+OR: OR, ||
+XOR: XOR
+XNOR: XNOR
+NOT: NOT, !
+
+# 比较
+EQ: EQUAL, ==, =, EQ
+NE: NOT_EQUAL, notEqual, !=, <>, NE
+GT: >, greaterThan, GREATER_THAN, GT
+GOE: >=, greaterThanOrEqual, GREATER_THAN_OR_EQUAL, GOE, GTE
+LT: <, lessThan, LESS_THAN, LT
+LOE: <=, lessThanOrEqual, LESS_THAN_OR_EQUAL, LOE, LTE
+BETWEEN: BETWEEN
+
+# NULL 比较
+IS_NULL: IS_NULL, ISNULL
+IS_NOT_NULL: IS_NOT_NULL, ISNOTNULL
+
+# 包含
+IN: IN
+NOT_IN: NOT_IN, notIn
+
+# 字符串比较
+LIKE: ~, LIKE, CONTAINS
+NOT_LIKE: !~, NOT_LIKE, notLike, NOT_CONTAINS, notContains
+STARTS_WITH: LEFT_LIKE, leftLike, STARTS_WITH, startsWith
+ENDS_WITH: RIGHT_LIKE, rightLike, ENDS_WITH, endsWith
+MATCHES: REGEXP, REGEX
+
+# ExtOps
+FIELD: COLUMN, FIELD
+COLUMNS: COLUMNS
+CONSTANT: CONSTANT, CONST
+EXISTS: EXISTS
+REL_ANY: REL_ANY, ANY, any
+REL_ALL: REL_ALL, ALL, all
+REL_NONE: REL_NONE, NONE, none
+
+# 聚合操作符
+COUNT_AGG: COUNT, count, $count
+SUM_AGG: SUM, sum, $sum
+AVG_AGG: AVG, avg, $avg, AVERAGE
+MAX_AGG: MAX, max, $max
+MIN_AGG: MIN, min, $min

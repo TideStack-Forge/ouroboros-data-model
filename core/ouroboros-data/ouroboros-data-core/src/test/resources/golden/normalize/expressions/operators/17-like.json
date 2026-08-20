@@ -1,0 +1,10 @@
+{
+  "name": "LIKE 模糊匹配",
+  "description": "测试 $like 操作符",
+  "input": {
+    "name": {
+      "$like": "%张%"
+    }
+  },
+  "scenario": "PLAIN_SQL"
+}

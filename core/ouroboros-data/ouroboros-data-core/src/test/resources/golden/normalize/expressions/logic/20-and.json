@@ -1,0 +1,17 @@
+{
+  "name": "AND 逻辑组合",
+  "description": "测试 $and 逻辑操作符",
+  "input": {
+    "$and": [
+      {
+        "age": {
+          "$gt": 18
+        }
+      },
+      {
+        "status": "active"
+      }
+    ]
+  },
+  "scenario": "PLAIN_SQL"
+}

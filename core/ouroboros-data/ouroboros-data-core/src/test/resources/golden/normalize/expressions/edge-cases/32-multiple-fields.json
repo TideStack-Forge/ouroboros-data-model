@@ -1,0 +1,10 @@
+{
+  "name": "多字段同时查询",
+  "description": "测试多个字段的同时查询（隐式 AND）",
+  "input": {
+    "name": "张三",
+    "age": 25,
+    "city": "北京"
+  },
+  "scenario": "PLAIN_SQL"
+}

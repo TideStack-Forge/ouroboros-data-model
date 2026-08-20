@@ -1,0 +1,15 @@
+{
+  "name": "OR 逻辑组合",
+  "description": "测试 $or 逻辑操作符",
+  "input": {
+    "$or": [
+      {
+        "status": "active"
+      },
+      {
+        "status": "pending"
+      }
+    ]
+  },
+  "scenario": "PLAIN_SQL"
+}

@@ -1,0 +1,10 @@
+{
+  "name": "IS NULL 检查",
+  "description": "测试 $isNull 操作符",
+  "input": {
+    "deletedAt": {
+      "$isNull": true
+    }
+  },
+  "scenario": "PLAIN_SQL"
+}

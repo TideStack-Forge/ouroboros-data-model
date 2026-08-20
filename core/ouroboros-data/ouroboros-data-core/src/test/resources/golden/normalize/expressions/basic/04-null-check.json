@@ -1,0 +1,8 @@
+{
+  "name": "NULL 检查",
+  "description": "测试 {\"deletedAt\": null} 的规范化",
+  "input": {
+    "deletedAt": null
+  },
+  "scenario": "PLAIN_SQL"
+}

@@ -1,0 +1,17 @@
+com.ouroboros.data.migration.kingbase.KingbaseBooleanDataTypeBuilder
+com.ouroboros.data.migration.kingbase.KingbaseFloatDataTypeBuilder
+com.ouroboros.data.migration.datatype.impl.BooleanDataTypeBuilder
+com.ouroboros.data.migration.datatype.impl.DateDataTypeBuilder
+com.ouroboros.data.migration.datatype.impl.DateTimeDataTypeBuilder
+com.ouroboros.data.migration.datatype.impl.DecimalDataTypeBuilder
+com.ouroboros.data.migration.datatype.impl.DoubleDataTypeBuilder
+com.ouroboros.data.migration.datatype.impl.FloatDataTypeBuilder
+com.ouroboros.data.migration.datatype.impl.IntegerDataTypeBuilder
+com.ouroboros.data.migration.datatype.impl.JsonDataTypeBuilder
+com.ouroboros.data.migration.datatype.impl.ListDataTypeBuilder
+com.ouroboros.data.migration.datatype.impl.LongDataTypeBuilder
+com.ouroboros.data.migration.datatype.impl.MapDataTypeBuilder
+com.ouroboros.data.migration.datatype.impl.ModelDataTypeBuilder
+com.ouroboros.data.migration.datatype.impl.ShortDataTypeBuilder
+com.ouroboros.data.migration.datatype.impl.StringDataTypeBuilder
+com.ouroboros.data.migration.datatype.impl.TimeDataTypeBuilder

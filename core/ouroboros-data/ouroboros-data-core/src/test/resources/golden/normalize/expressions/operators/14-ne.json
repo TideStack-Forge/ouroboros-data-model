@@ -1,0 +1,10 @@
+{
+  "name": "不等于操作符",
+  "description": "测试 $ne 操作符",
+  "input": {
+    "status": {
+      "$ne": "deleted"
+    }
+  },
+  "scenario": "PLAIN_SQL"
+}

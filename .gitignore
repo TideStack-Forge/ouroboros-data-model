@@ -1,0 +1,130 @@
+### Build Output ###
+target/
+!.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
+**/build/
+**/dist/
+**/coverage/
+**/test-results/
+**/playwright-report/
+
+### IntelliJ IDEA ###
+*.iws
+*.iml
+*.ipr
+.idea/
+/.idea/git_toolbox_prj.xml
+/.idea/git_toolbox_blame.xml
+/.idea/dictionaries/project.xml
+/.idea/jsLibraryMappings.xml
+/.idea/ClojureProjectResolveSettings.xml
+
+### Eclipse ###
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+
+### NetBeans ###
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+build/
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+### Gradle ###
+.gradle/
+**/build/
+!src/**/build/
+gradle-app.setting
+!gradle-wrapper.jar
+!gradle-wrapper.properties
+
+### VS Code ###
+.vscode/
+
+### TideStack local develop config ###
+.tidestack/develop.local.json
+
+### Maven ###
+.m2/
+.flattened-pom.xml
+
+### Mac OS ###
+.DS_Store
+
+
+### Debug & Test ###
+node_modules/
+**/node_modules/
+.npm-cache/
+.jenkins-last-stage.log
+.*.preflight-build-status
+**/docker/build-layer/
+**/docker/template-layer/
+testing-evidence/
+**/testing-evidence/
+tmp/
+**/tmp/
+/ouroboros/
+/web/
+/workspace/
+/upload/
+/data/
+application-debug.yml
+*.jar
+!gradle-wrapper.jar
+**/*.tsbuildinfo
+ide-plugins/common/amis-schema/dist/
+ide-plugins/vscode-plugin/dist/
+ide-plugins/vscode-plugin/*.vsix
+ide-plugins/vscode-plugin/package-lock.json
+ide-plugins/vscode-plugin/package.nls*.json
+
+
+### AI 助手 ###
+**/.claude/settings.local.json
+.aider*
+*.claude.txt
+.worktrees/
+.ai-workflows/
+.omx/
+.omo/
+/.playwright-mcp
+/.sisyphus
+.gstack/
+automation/
+
+# GDIM automation runtime
+automation-logs/
+automation/state/
+
+# Python 临时文件
+__pycache__/
+*.pyc
+
+# 其他临时文件
+*.backup
+tmp/
+
+### Debugging & Testing Artifacts ###
+# 根目录下的临时调试脚本
+/*.js
+/*.sh
+
+# 根目录下的临时截图
+/*.png
+/images
+/outputs
+
+# 临时报告和总结
+/bug-fix-report.md
+/docs/reports/*-bug-*.md
+/docs/reports/*-e2e-*.md

@@ -1,0 +1,33 @@
+{
+  "name": "复杂 AND/OR 组合",
+  "description": "测试复杂的逻辑组合",
+  "input": {
+    "$or": [
+      {
+        "$and": [
+          {
+            "age": {
+              "$gte": 18
+            }
+          },
+          {
+            "city": "北京"
+          }
+        ]
+      },
+      {
+        "$and": [
+          {
+            "status": "vip"
+          },
+          {
+            "score": {
+              "$gte": 90
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "scenario": "PLAIN_SQL"
+}

@@ -1,0 +1,13 @@
+# 内置的数据模型元数据装饰器
+
+# 主键装饰器
+com.ouroboros.data.model.decorators.PrimaryKeyDecorator
+
+# 审计字段装饰器
+com.ouroboros.data.model.decorators.AuditFieldsDecorator
+
+# SCD2 历史装饰器
+com.ouroboros.data.model.decorators.Scd2HistoryDecorator
+
+# 逻辑删除装饰器
+com.ouroboros.data.model.decorators.LogicalDeleteDecorator

@@ -1,0 +1,10 @@
+{
+  "name": "NOT 逻辑",
+  "description": "测试 $not 逻辑操作符",
+  "input": {
+    "$not": {
+      "status": "deleted"
+    }
+  },
+  "scenario": "PLAIN_SQL"
+}

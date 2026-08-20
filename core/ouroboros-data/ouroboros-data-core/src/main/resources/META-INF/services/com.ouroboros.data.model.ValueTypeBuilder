@@ -1,0 +1,16 @@
+com.ouroboros.data.model.valuetypes.BooleanValue
+com.ouroboros.data.model.valuetypes.DateTimeValue
+com.ouroboros.data.model.valuetypes.DateValue
+com.ouroboros.data.model.valuetypes.DecimalValue
+com.ouroboros.data.model.valuetypes.DoubleValue
+com.ouroboros.data.model.valuetypes.FloatValue
+com.ouroboros.data.model.valuetypes.IntegerValue
+com.ouroboros.data.model.valuetypes.LongValue
+com.ouroboros.data.model.valuetypes.ShortValue
+com.ouroboros.data.model.valuetypes.StringValue
+com.ouroboros.data.model.valuetypes.SnowflakeIdValue
+com.ouroboros.data.model.valuetypes.JsonValue
+com.ouroboros.data.model.valuetypes.MapValue
+com.ouroboros.data.model.valuetypes.ListValue
+com.ouroboros.data.model.valuetypes.ModelValue
+com.ouroboros.data.model.valuetypes.CollectionValue

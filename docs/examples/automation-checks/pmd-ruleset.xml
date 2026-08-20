@@ -1,0 +1,67 @@
+<?xml version="1.0"?>
+<ruleset name="Ouroboros PMD Rules"
+         xmlns="http://pmd.sourceforge.net/ruleset/2.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://pmd.sourceforge.net/ruleset/2.0.0 
+                             https://pmd.sourceforge.io/ruleset_2_0_0.xsd">
+
+  <description>Ouroboros 项目 PMD 规则集</description>
+
+  <!-- P0-1: 禁止异常吞噬 -->
+  <rule ref="category/java/errorprone.xml/EmptyCatchBlock">
+    <properties>
+      <property name="allowCommentedBlocks" value="false"/>
+    </properties>
+  </rule>
+  
+  <!-- 自定义规则：检测 catch (Exception ignored) -->
+  <rule name="NoIgnoredException"
+        language="java"
+        message="[P0-1] 禁止异常吞噬：不得使用 'ignored' 或 'ignore' 作为异常变量名"
+        class="net.sourceforge.pmd.lang.rule.xpath.XPathRule">
+    <description>
+      不得使用 'ignored' 或 'ignore' 作为异常变量名。
+      必须记录日志或抛出异常。
+      详见 DESIGN.md
+    </description>
+    <priority>1</priority>
+    <properties>
+      <property name="xpath">
+        <value>
+          <![CDATA[
+            //CatchStatement/FormalParameter/VariableDeclaratorId[
+              @Name='ignored' or @Name='ignore'
+            ]
+          ]]>
+        </value>
+      </property>
+    </properties>
+  </rule>
+  
+  <!-- P1-8: 异常必须使用 Ouroboros 异常体系 -->
+  <rule name="UseOuroborosExceptions"
+        language="java"
+        message="[P1-8] 业务异常应使用 Ouroboros 异常体系（BusinessException, ValidationException 等）"
+        class="net.sourceforge.pmd.lang.rule.xpath.XPathRule">
+    <description>
+      业务逻辑抛出的异常应使用 Ouroboros 异常体系。
+      避免直接抛出 RuntimeException 或 Exception。
+    </description>
+    <priority>2</priority>
+    <properties>
+      <property name="xpath">
+        <value>
+          <![CDATA[
+            //ThrowStatement/Expression/PrimaryExpression/PrimaryPrefix/AllocationExpression/ClassOrInterfaceType[
+              (@Image='RuntimeException' or @Image='Exception') and
+              not(ancestor::CompilationUnit/PackageDeclaration/Name[
+                starts-with(@Image, 'com.ouroboros.data.util')
+              ])
+            ]
+          ]]>
+        </value>
+      </property>
+    </properties>
+  </rule>
+  
+</ruleset>

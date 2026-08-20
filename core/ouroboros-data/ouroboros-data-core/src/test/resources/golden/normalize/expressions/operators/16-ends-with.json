@@ -1,0 +1,10 @@
+{
+  "name": "字符串结尾匹配",
+  "description": "测试 $endsWith 操作符",
+  "input": {
+    "email": {
+      "$endsWith": "@example.com"
+    }
+  },
+  "scenario": "PLAIN_SQL"
+}

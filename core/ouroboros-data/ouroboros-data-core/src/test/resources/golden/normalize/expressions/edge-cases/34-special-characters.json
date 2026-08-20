@@ -1,0 +1,10 @@
+{
+  "name": "特殊字符测试",
+  "description": "测试包含特殊字符的字符串",
+  "input": {
+    "name": {
+      "$contains": "张'三\""
+    }
+  },
+  "scenario": "PLAIN_SQL"
+}
