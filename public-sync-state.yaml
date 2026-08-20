@@ -1,0 +1,42 @@
+schema_version: 1
+roadmap: dynamic-data-model-open-source
+mode: sync
+status: passed
+generated_at: "2026-08-20T11:35:05.709928+00:00"
+manifest: internal-export-manifest
+manifest_sha256: 4e14ff7412b973929966184f3b362455f03c2c2e8297e3527ce97bc6cb601604
+target: public-tree-local-fixture
+source_ref_recorded_in_public_tree: false
+public_ref_recorded_in_public_tree: false
+sync:
+  policy: manifest-scoped-forward-sync
+  dry_run: true
+  history_policy: orphan-from-first-public-release
+  internal_commit_messages_copied: false
+  projection_commit_message: "Sync public data model projection"
+  remote_actions_performed: false
+included_modules:
+  - data-core
+  - data-plugins
+  - data-typed-core
+  - data-typed-meta-processor
+  - data-sql
+  - data-sql-migration
+  - data-builders
+  - data-test-support
+  - data-pkgen-coding
+checks:
+  build_passed: true
+  public_dependency_violations: 0
+  internal_git_history_copied: false
+  codestable_copied: false
+  pkgen_forbidden_matches: 0
+  release_gate_passed: true
+  sensitive_content_matches: 0
+  public_docs_forbidden_matches: 0
+non_automatic_actions:
+  remote_push: false
+  merge: false
+  publish: false
+  release: false
+  deploy: false
