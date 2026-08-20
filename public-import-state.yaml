@@ -1,0 +1,31 @@
+schema_version: 1
+roadmap: dynamic-data-model-open-source
+status: passed
+generated_at: "2026-08-20T11:37:12.469386+00:00"
+public_repo: public-tree-local-fixture
+public_pr: fixture
+target_branch: import-branch-dry-run
+manifest: internal-export-manifest
+manifest_sha256: 4e14ff7412b973929966184f3b362455f03c2c2e8297e3527ce97bc6cb601604
+public_ref_recorded_in_public_tree: false
+dry_run: true
+direct_merge_to_main: false
+remote_actions_performed: false
+allowed_paths:
+  - core/ouroboros-data/ouroboros-data-core/PUBLIC_IMPORT_FIXTURE.md
+blocked_paths:
+  - platform/internal-only/SHOULD_NOT_IMPORT.md
+attribution:
+  author: "Fixture Public Contributor <fixture.public@example.invalid>"
+  commit_author: "Fixture Public Contributor <fixture.public@example.invalid>"
+  co_authors: []
+  dco: missing-fixture-evidence
+  cla: not-verified-fixture-evidence
+  owner_policy_decision_required: true
+non_automatic_actions:
+  branch_creation: false
+  merge: false
+  remote_push: false
+  publish: false
+  release: false
+  deploy: false
