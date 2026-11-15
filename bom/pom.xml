@@ -39,6 +39,12 @@
 
     <dependencyManagement>
         <dependencies>
+            <!-- Align Spring Authorization Server and Spring Security JOSE transitive versions. -->
+            <dependency>
+                <groupId>com.nimbusds</groupId>
+                <artifactId>nimbus-jose-jwt</artifactId>
+                <version>9.47</version>
+            </dependency>
             <!-- Keep Fabric8's internal modules on the same line as the client dependency. -->
             <dependency>
                 <groupId>io.fabric8</groupId>
@@ -74,7 +80,7 @@
             </dependency>
             <!-- Spring AI 2.0.0 uses victools for model-side schema generation. This is not
                  the project-side JSON Schema validation API; application validation should
-                 go through the project-approved JSON Schema validation helper. Pin these
+                 go through com.ouroboros.util.JsonSchemas, backed by networknt. Pin these
                  transitive versions so Maven Enforcer convergence remains deterministic. -->
             <dependency>
                 <groupId>tools.jackson.core</groupId>
@@ -306,6 +312,11 @@
 
             <!-- ouroboros包版本管理 -->
             <!-- 支持包 -->
+            <dependency>
+                <groupId>com.ouroboros</groupId>
+                <artifactId>ouroboros-util</artifactId>
+                <version>${ouroboros.version}</version>
+            </dependency>
 
             <!-- 公共包 -->
 
@@ -403,11 +414,13 @@
 
             <!-- 文件上传 -->
 
+            <!-- 审批流外部引擎对接模块 -->
+
             <!-- 通知模块 -->
             <dependency>
                 <groupId>com.aliyun</groupId>
                 <artifactId>tea-util</artifactId>
-                <version>0.2.13</version>
+                <version>0.2.27</version>
             </dependency>
             <dependency>
                 <groupId>com.aliyun</groupId>

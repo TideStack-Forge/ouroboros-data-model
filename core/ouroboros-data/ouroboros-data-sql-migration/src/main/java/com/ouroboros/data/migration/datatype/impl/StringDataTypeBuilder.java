@@ -7,6 +7,7 @@ import com.ouroboros.data.model.DataModelField;
 import com.ouroboros.data.model.valuetypes.StringValue;
 
 import liquibase.database.Database;
+import liquibase.database.core.H2Database;
 import liquibase.structure.core.DataType;
 
 /**
@@ -28,6 +29,10 @@ public class StringDataTypeBuilder implements DataTypeBuilder {
       return dataType;
     }
 
+    // H2 aliases TEXT to VARCHAR and Liquibase can ignore the size change.
+    if (database instanceof H2Database && field.getExtraProp(String.class, "allowVarcharToText").filter("true"::equals).isPresent()) {
+      return new DataType("CLOB");
+    }
     return new DataType("TEXT");
   }
 }

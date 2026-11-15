@@ -22,7 +22,7 @@ mvn -Ppublic -pl core/ouroboros-data/ouroboros-data-core,core/ouroboros-data/our
 - `ouroboros-data-typed-meta-processor`: typed metadata annotation processor.
 - `ouroboros-data-pkgen-coding`: coding primary-key template parser and factory
   backed by the `DataExpressionEvaluator` and `CodingSequencer` public ports.
-- `ouroboros-data-builders`: public builder helpers.
+- `ouroboros-data-builders`: deprecated builder helpers; use data-core APIs.
 - `ouroboros-data-test-support`: public test fixtures and helpers.
 
 Runtime-backed sequence implementations, script wrappers and snowflake adapters

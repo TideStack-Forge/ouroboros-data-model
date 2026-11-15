@@ -34,4 +34,8 @@ public interface DataModelPlugin {
   default Try<RecordList> query(QueryStatement statement, DataModelPluginContext context) {
     return context.getNextPlugin().query(statement, context.getNextPluginContext());
   }
+
+  default Try<RecordList> queryForUpdate(QueryStatement statement, DataModelPluginContext context) {
+    return context.getNextPlugin().queryForUpdate(statement, context.getNextPluginContext());
+  }
 }

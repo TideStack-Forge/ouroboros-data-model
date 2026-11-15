@@ -30,8 +30,8 @@ It intentionally describes only the manifest-selected public surface.
   and does not depend back on the SQL query module.
 - `ouroboros-data-pkgen-coding` owns the coding primary-key factory and uses
   the expression port defined by `ouroboros-data-core`.
-- `ouroboros-data-builders` and `ouroboros-data-test-support` provide optional
-  construction and test helpers when their dependencies remain public.
+- `ouroboros-data-builders` is deprecated; use query facades in data-core and
+  model metadata APIs. `ouroboros-data-test-support` provides public test helpers.
 
 ## Deferred Or Runtime-Owned Surface
 

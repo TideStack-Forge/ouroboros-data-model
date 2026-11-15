@@ -187,6 +187,12 @@ final class DefaultTypedDataModelQuery<PK, M> implements TypedDataModelQuery<PK,
   }
 
   @Override
+  public TypedDataModelQuery<PK, M> withoutPlugins() {
+    typedDataModel = typedDataModel.withoutPlugins();
+    return this;
+  }
+
+  @Override
   public Map<String, Object> build() {
     return query.build();
   }

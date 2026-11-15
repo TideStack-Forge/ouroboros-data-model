@@ -51,6 +51,13 @@ public class NormalizeWhereDataModelPlugin implements DataModelPlugin {
         .build(), context);
   }
 
+  @Override
+  public Try<RecordList> queryForUpdate(QueryStatement statement, DataModelPluginContext context) {
+    return DataModelPlugin.super.queryForUpdate(statement.getBuilder()
+        .where(normalize(statement.getWhere()))
+        .build(), context);
+  }
+
   private SExpression<Boolean> normalize(SExpression<Boolean> where) {
     return SExpressions.filter(where, (expression, context) -> shouldKeepExpression(expression))
         .map(expression -> expression.isEmpty()

@@ -14,6 +14,7 @@
 
     <modules>
         <module>bom</module>
+        <module>libs</module>
         <module>core</module>
     </modules>
 
@@ -257,7 +258,7 @@
                                         <exclude>org.wso2.orbit.com.github.java-json-tools:json-schema-validator-all</exclude>
                                         <exclude>org.wso2.orbit.org.everit.json:org.everit.json.schema</exclude>
                                     </excludes>
-                                    <message>Use SLF4J instead of commons-logging; use the project-approved JSON Schema validation helper</message>
+                                    <message>Use SLF4J instead of commons-logging; use com.ouroboros.util.JsonSchemas for JSON Schema validation</message>
                                 </bannedDependencies>
                                 <dependencyConvergence/>
                             </rules>

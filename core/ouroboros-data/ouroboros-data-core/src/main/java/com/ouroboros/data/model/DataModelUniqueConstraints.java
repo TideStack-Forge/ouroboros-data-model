@@ -119,7 +119,8 @@ public final class DataModelUniqueConstraints {
         fields,
         scope,
         DataModelUniqueConstraint.Source.MODEL,
-        name
+        name,
+        Boolean.TRUE.equals(constraint.getExtraProp(DataModelUniqueConstraint.NULLS_DISTINCT_EXTRA_PROP_NAME).orElse(null))
     );
   }
 }

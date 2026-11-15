@@ -15,9 +15,14 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.net.URLClassLoader;
+import java.nio.file.Files;
+import java.nio.file.Path;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+import jakarta.annotation.Priority;
 import org.mockito.ArgumentCaptor;
 
 import io.vavr.control.Try;
@@ -35,6 +40,10 @@ import com.ouroboros.data.model.valuetypes.ModelValue;
 import com.ouroboros.data.model.valuetypes.StringValue;
 import com.ouroboros.data.record.RecordList;
 import com.ouroboros.data.station.DataStation;
+import com.ouroboros.data.orchestration.strategy.PopulateStrategy;
+import com.ouroboros.data.orchestration.strategy.PopulateStrategySelector;
+import com.ouroboros.data.orchestration.strategy.PopulateField;
+import com.ouroboros.data.orchestration.step.QueryStep;
 
 /**
  * DefaultQueryOrchestrator 单元测试
@@ -42,6 +51,61 @@ import com.ouroboros.data.station.DataStation;
  * @author Claude Code
  */
 class DefaultQueryOrchestratorTest {
+
+  @Test
+  void registeredSelectorChangesPopulateResultsThroughTheNormalPlan(@TempDir Path directory) throws Exception {
+    DataModel relatedModel = setupRelatedModel("department", true, true);
+    when(relatedModel.getFields()).thenReturn(List.of());
+    when(model.getField("department").orElseThrow().getName()).thenReturn("department");
+    context.setPopulateClause(PopulateClause.fromRaw("department"));
+    when(executor.execute(any())).thenReturn(Try.success(RecordList.of(List.of(new HashMap<>(Map.of("id", 1))))));
+
+    Path registration = directory.resolve("META-INF/services/" + PopulateStrategySelector.class.getName());
+    Files.createDirectories(registration.getParent());
+    Files.writeString(registration, LowPrioritySelector.class.getName() + "\n" + CustomSelector.class.getName() + "\n");
+    ClassLoader original = Thread.currentThread().getContextClassLoader();
+    try (var loader = new URLClassLoader(new java.net.URL[]{directory.toUri().toURL()}, original)) {
+      Thread.currentThread().setContextClassLoader(loader);
+      var result = new DefaultQueryOrchestrator().orchestrate(
+          QueryStatement.builder().from("employee").build(), model, executor, context).get();
+      assertEquals("custom", result.get(0).get("department"));
+      assertEquals(1, result.get(0).get("id"));
+      verify(relatedModel, never()).query(anyMap());
+    } finally {
+      Thread.currentThread().setContextClassLoader(original);
+    }
+  }
+
+  @Priority(100)
+  public static class CustomSelector implements PopulateStrategySelector {
+    @Override
+    public PopulateStrategy select(PopulateField populate) {
+      return (field, source) -> List.of(new QueryStep() {
+        @Override
+        public String getName() {
+          return "custom_" + field.fieldName();
+        }
+
+        @Override
+        public void execute(OrchestrationContext context) {
+          var rows = context.getResult(source).stream().map(record -> {
+            Map<String, Object> row = new HashMap<>(record);
+            row.put(field.fieldName(), "custom");
+            return row;
+          }).toList();
+          context.setResult(source, RecordList.of(rows));
+        }
+      });
+    }
+  }
+
+  @Priority(10)
+  public static class LowPrioritySelector implements PopulateStrategySelector {
+    @Override
+    public PopulateStrategy select(PopulateField populate) {
+      throw new AssertionError("Lower priority selector must not override the primary selector");
+    }
+  }
 
   private DefaultQueryOrchestrator orchestrator;
   private OrchestrationContext context;

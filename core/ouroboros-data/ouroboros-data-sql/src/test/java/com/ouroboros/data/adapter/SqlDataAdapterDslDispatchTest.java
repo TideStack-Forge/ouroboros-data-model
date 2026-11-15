@@ -28,7 +28,7 @@ class SqlDataAdapterDslDispatchTest {
 
     var jdbcTemplate = new JdbcTemplate(ds);
     jdbcTemplate.execute("DROP TABLE IF EXISTS users");
-    jdbcTemplate.execute("CREATE TABLE users (id BIGINT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(100), age INT, status VARCHAR(32))");
+    jdbcTemplate.execute("CREATE TABLE users (id BIGINT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(100), age INT, status VARCHAR(32), revision BIGINT)");
   }
 
   @Test
@@ -77,6 +77,22 @@ class SqlDataAdapterDslDispatchTest {
     delete.put("where", mapOf("name", "Bob"));
     var deleted = adapter.delete(delete).get();
     assertEquals(1L, deleted);
+  }
+
+  @Test
+  void shouldTreatNullWhereValueAsIsNullForCasStyleUpdate() {
+    adapter.execute("INSERT INTO users(name, status, revision) VALUES (?, ?, ?)",
+        "Legacy", "active", null).get();
+
+    Map<String, Object> update = new HashMap<>();
+    update.put("update", "users");
+    update.put("set", mapOf("status", "migrated", "revision", 1L));
+    update.put("where", mapOf("name", "Legacy", "revision", null));
+
+    assertEquals(1L, adapter.update(update).get());
+    var migrated = adapter.query("SELECT status, revision FROM users WHERE name = ?", "Legacy").get();
+    assertEquals("migrated", migrated.get(0).get("status"));
+    assertEquals(1L, migrated.get(0).get("revision"));
   }
 
   @Test

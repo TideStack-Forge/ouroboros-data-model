@@ -5,8 +5,8 @@
 English documentation: [`README.en.md`](README.en.md)
 
 - 导出 manifest：`internal export manifest (not copied)`
-- Manifest SHA-256：`4e14ff7412b973929966184f3b362455f03c2c2e8297e3527ce97bc6cb601604`
-- 导出模式：`sync`
+- Manifest SHA-256：`93ce24bc900d448bdc5ee19f29e4f1129956ccd1df5a59e086723c02231071e6`
+- 导出模式：`dry-run`
 - 开源协议：Apache License 2.0，见 `LICENSE`
 - 非自动动作：本导出流程不会自动执行 remote push、merge、publish、release、deploy 或 promotion
 

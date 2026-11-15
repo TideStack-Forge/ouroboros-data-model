@@ -81,6 +81,11 @@ public class SqlDataStation extends AbstractDataStation<DataSource> implements M
     return migrate(DataModels);
   }
 
+  @Override
+  public Either<DataModelException, Boolean> hasRequiredUniqueColumn(DataModel model, String rawColumnName) {
+    return SqlMigrationService.getDefault().hasRequiredUniqueColumn(dataSource, model, rawColumnName);
+  }
+
   public Either<DataModelException, Boolean> migrateByNames(List<String> modelNames) {
     List<DataModel> dataModelMetas = this.getDataModelList().stream()
         .filter(model -> modelNames.contains(model.getFullName()))

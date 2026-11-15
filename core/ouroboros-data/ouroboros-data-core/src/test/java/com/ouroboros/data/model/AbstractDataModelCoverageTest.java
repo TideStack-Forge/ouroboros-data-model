@@ -24,6 +24,25 @@ import com.ouroboros.data.record.RecordList;
 class AbstractDataModelCoverageTest {
 
   @Test
+  void tableAndColumnNamesPreserveAcronymsAndExplicitNames() {
+    var meta = buildMeta();
+    meta.setNamespace("account");
+    meta.setName("URLValue");
+    var fieldMeta = meta.getFields().get(1);
+    fieldMeta.setName("requestIDValue");
+    var model = new StubModel(meta);
+    var field = new DefaultDataModelField(model, fieldMeta);
+
+    assertEquals("account_url_value", model.getRawName());
+    assertEquals("request_id_value", field.getRawName());
+
+    meta.setRawName("custom_table");
+    fieldMeta.setRawName("CUSTOM_COLUMN");
+    assertEquals("custom_table", model.getRawName());
+    assertEquals("CUSTOM_COLUMN", field.getRawName());
+  }
+
+  @Test
   void abstractDataModelCoversIdOperationsAndInsertOrUpdateBranches() {
     var model = new StubModel(buildMeta());
 

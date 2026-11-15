@@ -1,17 +1,23 @@
 package com.ouroboros.data.migration;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 
 import org.h2.jdbcx.JdbcDataSource;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import com.ouroboros.data.adapter.DataAdapter;
 import com.ouroboros.data.migration.service.LiquibaseSqlMigrationService;
@@ -29,6 +35,48 @@ import com.ouroboros.data.station.DataStation;
 import io.vavr.control.Try;
 
 class DatabaseMigrationIntegrationTest {
+
+  @ParameterizedTest
+  @ValueSource(strings = {"", ";DATABASE_TO_LOWER=TRUE"})
+  void unchangedSchemaShouldNeedNoMigrationRegardlessOfIdentifierCase(String caseSetting) throws SQLException {
+    var ds = new JdbcDataSource();
+    ds.setURL("jdbc:h2:mem:migration_identifier_case_" + UUID.randomUUID()
+        + ";DB_CLOSE_DELAY=-1" + caseSetting);
+    ds.setUser("sa");
+    ds.setPassword("");
+    var service = new LiquibaseSqlMigrationService();
+    var models = List.of(model("orders"));
+
+    var initialSql = service.generateMigrationSql(ds, "", "Ouroboros", models).getOrElseThrow(error -> error);
+    assertFalse(initialSql.isEmpty());
+    try (var connection = ds.getConnection(); var statement = connection.createStatement()) {
+      for (var sql : initialSql) {
+        statement.execute(sql);
+      }
+      statement.executeUpdate("INSERT INTO orders (id, code) VALUES (1, 'retained')");
+    }
+
+    var unchangedSql = service.generateMigrationSql(ds, "", "Ouroboros", models).getOrElseThrow(error -> error);
+    assertTrue(unchangedSql.isEmpty(), unchangedSql.toString());
+    var repeated = service.migrate(ds, "", "Ouroboros", models);
+    assertTrue(repeated.isRight(), () -> repeated.getLeft().getMessage());
+
+    var expanded = List.of(model("orders"), model("more_orders"));
+    var addedTableSql = service.generateMigrationSql(ds, "", "Ouroboros", expanded).getOrElseThrow(error -> error);
+    assertFalse(addedTableSql.isEmpty());
+    try (var connection = ds.getConnection(); var statement = connection.createStatement()) {
+      for (var sql : addedTableSql) {
+        statement.execute(sql);
+      }
+      try (var rows = statement.executeQuery("SELECT code FROM orders WHERE id = 1")) {
+        assertTrue(rows.next());
+        assertEquals("retained", rows.getString(1));
+      }
+      statement.executeUpdate("INSERT INTO more_orders (id, code) VALUES (2, 'new')");
+    }
+    assertTrue(service.generateMigrationSql(ds, "", "Ouroboros", expanded)
+        .getOrElseThrow(error -> error).isEmpty());
+  }
 
   @Test
   void shouldGenerateAndApplyMigrationForSimpleModel() {
@@ -49,18 +97,180 @@ class DatabaseMigrationIntegrationTest {
     assertNotNull(ds);
   }
 
+  @Test
+  void shouldCreateBothTablesWhenMigrationsRunBackToBack() throws SQLException {
+    var ds = new JdbcDataSource();
+    ds.setURL("jdbc:h2:mem:migration_back_to_back_test;MODE=MySQL;DB_CLOSE_DELAY=-1");
+    ds.setUser("sa");
+    ds.setPassword("");
+
+    var service = new LiquibaseSqlMigrationService();
+
+    var first = service.migrate(ds, "", "Ouroboros", Arrays.asList(model("DYNAMIC_FORM_A")));
+    var second = service.migrate(ds, "", "Ouroboros", Arrays.asList(model("DYNAMIC_FORM_B")));
+
+    assertTrue(first.isRight(), () -> first.isLeft() ? first.getLeft().getMessage() : "");
+    assertTrue(second.isRight(), () -> second.isLeft() ? second.getLeft().getMessage() : "");
+    assertTrue(tableExists(ds, "DYNAMIC_FORM_A"));
+    assertTrue(tableExists(ds, "DYNAMIC_FORM_B"));
+  }
+
+  @Test
+  void shouldCreateTableAfterPreviousNoopMigration() throws SQLException {
+    var ds = new JdbcDataSource();
+    ds.setURL("jdbc:h2:mem:migration_after_noop_test;MODE=MySQL;DB_CLOSE_DELAY=-1");
+    ds.setUser("sa");
+    ds.setPassword("");
+
+    var service = new LiquibaseSqlMigrationService();
+
+    var noop = service.migrate(ds, "", "Ouroboros", Collections.emptyList());
+    var migrated = service.migrate(ds, "", "Ouroboros", Arrays.asList(model("DYNAMIC_FORM_AFTER_NOOP")));
+
+    assertTrue(noop.isRight(), () -> noop.isLeft() ? noop.getLeft().getMessage() : "");
+    assertTrue(migrated.isRight(), () -> migrated.isLeft() ? migrated.getLeft().getMessage() : "");
+    assertTrue(tableExists(ds, "DYNAMIC_FORM_AFTER_NOOP"));
+  }
+
+  @Test
+  void shouldCreateTablesAfterDataSourceWasUsedRepeatedly() throws SQLException {
+    var ds = new JdbcDataSource();
+    ds.setURL("jdbc:h2:mem:migration_after_repeated_datasource_use_test;MODE=MySQL;DB_CLOSE_DELAY=-1");
+    ds.setUser("sa");
+    ds.setPassword("");
+
+    for (int i = 0; i < 20; i++) {
+      touchMetadata(ds);
+    }
+
+    var service = new LiquibaseSqlMigrationService();
+    var first = service.migrate(ds, "", "Ouroboros", Arrays.asList(model("DYNAMIC_FORM_REPEATED_A")));
+    var second = service.migrate(ds, "", "Ouroboros", Arrays.asList(model("DYNAMIC_FORM_REPEATED_B")));
+
+    assertTrue(first.isRight(), () -> first.isLeft() ? first.getLeft().getMessage() : "");
+    assertTrue(second.isRight(), () -> second.isLeft() ? second.getLeft().getMessage() : "");
+    assertTrue(tableExists(ds, "DYNAMIC_FORM_REPEATED_A"));
+    assertTrue(tableExists(ds, "DYNAMIC_FORM_REPEATED_B"));
+  }
+
+  @Test
+  void widensOptedInConfigurationColumnWithoutLosingValuesOrShrinkingOnRollback() throws SQLException {
+    var ds = new JdbcDataSource();
+    ds.setURL("jdbc:h2:mem:configuration_widening;MODE=MySQL;DB_CLOSE_DELAY=-1");
+    ds.setUser("sa");
+    var service = new LiquibaseSqlMigrationService();
+    String table = "CONFIGURATION_WIDENING";
+    var original = model(table, configValue(255, false));
+    assertTrue(service.migrate(ds, "", "Ouroboros", List.of(original)).isRight());
+    try (var connection = ds.getConnection(); var statement = connection.createStatement()) {
+      statement.executeUpdate("INSERT INTO CONFIGURATION_WIDENING (id, code) VALUES (1, '旧值')");
+    }
+    var unapproved = model(table, configValue(1024, false));
+    assertTrue(service.generateMigrationSql(ds, "", "Ouroboros", List.of(unapproved)).get().isEmpty());
+
+    var widened = model(table, configValue(1024, true));
+    var migrated = service.migrate(ds, "", "Ouroboros", List.of(widened));
+    assertTrue(migrated.isRight(), () -> migrated.isLeft() ? migrated.getLeft().getMessage() : "");
+    var newValue = "配置".repeat(500);
+    try (var connection = ds.getConnection();
+         var insert = connection.prepareStatement("INSERT INTO CONFIGURATION_WIDENING (id, code) VALUES (2, ?)")) {
+      insert.setString(1, newValue);
+      assertEquals(1, insert.executeUpdate());
+    }
+    assertTrue(service.migrate(ds, "", "Ouroboros", List.of(original)).isRight());
+    try (var connection = ds.getConnection(); var statement = connection.createStatement();
+         var rows = statement.executeQuery("SELECT code FROM CONFIGURATION_WIDENING ORDER BY id")) {
+      assertTrue(rows.next());
+      assertEquals("旧值", rows.getString(1));
+      assertTrue(rows.next());
+      assertEquals(newValue, rows.getString(1));
+    }
+  }
+
+  @Test
+  void addsUniqueColumnBeforeCheckingItsValuesAndPreservesExistingRows() throws SQLException {
+    var ds = new JdbcDataSource();
+    ds.setURL("jdbc:h2:mem:new_unique_column_" + UUID.randomUUID() + ";MODE=MySQL;DB_CLOSE_DELAY=-1");
+    ds.setUser("sa");
+    var service = new LiquibaseSqlMigrationService();
+    String table = "ACCOUNT_UPGRADE";
+    var original = model(table, new StubField("code", "code", new StringValue(), true, false, false));
+    assertTrue(service.migrate(ds, "", "Ouroboros", List.of(original)).isRight());
+    try (var connection = ds.getConnection(); var statement = connection.createStatement()) {
+      statement.executeUpdate("INSERT INTO ACCOUNT_UPGRADE (id, code) VALUES (1, 'first'), (2, 'second')");
+    }
+    var upgraded = model(table,
+        new StubField("publicSubjectId", "public_subject_id", new StringValue(), true, true, false));
+    var result = service.migrate(ds, "", "Ouroboros", List.of(upgraded));
+    assertTrue(result.isRight(), () -> result.getLeft().getMessage());
+    try (var connection = ds.getConnection(); var statement = connection.createStatement()) {
+      try (var rows = statement.executeQuery("SELECT COUNT(*) FROM ACCOUNT_UPGRADE WHERE public_subject_id IS NULL")) {
+        assertTrue(rows.next());
+        assertEquals(2, rows.getInt(1));
+      }
+      statement.executeUpdate("UPDATE ACCOUNT_UPGRADE SET public_subject_id = 'subject-one' WHERE id = 1");
+      org.junit.jupiter.api.Assertions.assertThrows(SQLException.class,
+          () -> statement.executeUpdate("UPDATE ACCOUNT_UPGRADE SET public_subject_id = 'subject-one' WHERE id = 2"));
+    }
+  }
+
+  @Test
+  void stillRejectsDuplicateValuesWhenAddingUniqueConstraintToExistingColumn() throws SQLException {
+    var ds = new JdbcDataSource();
+    ds.setURL("jdbc:h2:mem:existing_unique_column_" + UUID.randomUUID() + ";MODE=MySQL;DB_CLOSE_DELAY=-1");
+    ds.setUser("sa");
+    var service = new LiquibaseSqlMigrationService();
+    String table = "EXISTING_ACCOUNT";
+    assertTrue(service.migrate(ds, "", "Ouroboros", List.of(model(table,
+        new StubField("code", "code", new StringValue(), true, false, false)))).isRight());
+    try (var connection = ds.getConnection(); var statement = connection.createStatement()) {
+      statement.executeUpdate("INSERT INTO EXISTING_ACCOUNT (id, code) VALUES (1, 'same'), (2, 'same')");
+    }
+    var result = service.migrate(ds, "", "Ouroboros", List.of(model(table,
+        new StubField("code", "code", new StringValue(), true, true, false))));
+    assertTrue(result.isLeft());
+    assertTrue(result.getLeft().getMessage().contains("新增唯一约束前发现重复数据"));
+  }
+
+  private static StubField configValue(int size, boolean allowWidening) {
+    return new StubField("code", "code", new StringValue(), false, false, false) {
+      @Override public String getLabel() { return null; }
+      @Override public Integer getSize() { return size; }
+      @Override public Optional<Object> getExtraProp(String name) {
+        return allowWidening && "allowVarcharToText".equals(name) ? Optional.of("true") : Optional.empty();
+      }
+    };
+  }
+
+  @Test
+  void shouldGenerateUniqueInMemoryChangeSetIdRoots() {
+    var first = DatabaseMigration.nextInMemoryChangeSetIdRoot();
+    var second = DatabaseMigration.nextInMemoryChangeSetIdRoot();
+
+    assertNotEquals(first, second);
+    assertTrue(first.startsWith("migration-"));
+    assertTrue(second.startsWith("migration-"));
+  }
+
   private static DataModel model() {
+    return model("ORDERS");
+  }
+
+  private static DataModel model(String rawTableName) {
+    return model(rawTableName, new StubField("code", "code", new StringValue(), true, false, true));
+  }
+
+  private static DataModel model(String rawTableName, StubField code) {
     var id = new StubField("id", "id", new IntegerValue(), false, true, false);
-    var code = new StubField("code", "code", new StringValue(), true, false, true);
     return new DataModel() {
       @Override public String getFormatVersion() { return "1"; }
       @Override public String getSource() { return null; }
       @Override public String getNamespace() { return "demo"; }
-      @Override public String getName() { return "orders"; }
-      @Override public String getFullName() { return "demo.orders"; }
-      @Override public String getLabel() { return "orders"; }
+      @Override public String getName() { return rawTableName.toLowerCase(); }
+      @Override public String getFullName() { return "demo." + getName(); }
+      @Override public String getLabel() { return getName(); }
       @Override public String getDescription() { return null; }
-      @Override public String getRawName() { return "ORDERS"; }
+      @Override public String getRawName() { return rawTableName; }
       @Override public MigrationStrategy getMigrationStrategy() { return MigrationStrategy.AUTO; }
       @Override public Map<String, Object> getExtraProps() { return Collections.emptyMap(); }
       @Override public Optional<Object> getExtraProp(String name) { return Optional.empty(); }
@@ -94,6 +304,26 @@ class DatabaseMigrationIntegrationTest {
       @Override public DataModel withoutPlugins() { return this; }
       @Override public boolean hasPlugin(String name) { return false; }
     };
+  }
+
+  private static boolean tableExists(JdbcDataSource ds, String tableName) throws SQLException {
+    try (var connection = ds.getConnection();
+         var statement = connection.prepareStatement("SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = ?")) {
+      statement.setString(1, tableName);
+      try (var resultSet = statement.executeQuery()) {
+        resultSet.next();
+        return resultSet.getInt(1) > 0;
+      }
+    }
+  }
+
+  private static void touchMetadata(JdbcDataSource ds) throws SQLException {
+    try (var connection = ds.getConnection();
+         var tables = connection.getMetaData().getTables(null, null, "%", new String[] {"TABLE"})) {
+      while (tables.next()) {
+        tables.getString("TABLE_NAME");
+      }
+    }
   }
 
   private static class StubField implements DataModelField {

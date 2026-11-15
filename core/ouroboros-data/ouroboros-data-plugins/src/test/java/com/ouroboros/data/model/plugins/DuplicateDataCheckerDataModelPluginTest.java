@@ -61,6 +61,7 @@ class DuplicateDataCheckerDataModelPluginTest {
   void activeRecordsCanReapplyExistingLogicalDeletePluginForDuplicateCheck() {
     var fixture = new Fixture(List.of("id"));
     fixture.hasPlugin("LogicalDelete");
+    when(fixture.source.getExtraProp("uniquenessScope")).thenReturn(Optional.of("ACTIVE_RECORDS"));
     DataModelPlugin plugin = fixture.buildPlugin(false);
     fixture.count(where -> 0L);
 
@@ -75,6 +76,7 @@ class DuplicateDataCheckerDataModelPluginTest {
   void activeRecordsCanReapplyExistingLegacySoftDeletePluginForDuplicateCheck() {
     var fixture = new Fixture(List.of("id"));
     fixture.hasPlugin("SoftDelete");
+    when(fixture.source.getExtraProp("uniquenessScope")).thenReturn(Optional.of("ACTIVE_RECORDS"));
     DataModelPlugin plugin = fixture.buildPlugin(false);
     fixture.count(where -> 0L);
 
@@ -120,24 +122,46 @@ class DuplicateDataCheckerDataModelPluginTest {
   }
 
   @Test
-  void insertWithMultipleUniqueFieldsBuildsExistingOrCondition() {
+  void insertAcceptsIndependentValuesAndRejectsConflictOnEitherUniqueField() {
+    for (var existing : List.of(linkedMap("email", "other@example.com", "code", "OTHER"),
+        linkedMap("email", "alice@example.com", "code", "OTHER"),
+        linkedMap("email", "other@example.com", "code", "A001"))) {
+      var fixture = new Fixture(List.of("id"));
+      DataModelPlugin plugin = fixture.buildPlugin(false);
+      fixture.count(where -> matches(where, existing) ? 1L : 0L);
+      var result = plugin.insert(linkedMap("email", "alice@example.com", "code", "A001"), fixture.context);
+      boolean conflict = "alice@example.com".equals(existing.get("email")) || "A001".equals(existing.get("code"));
+      assertEquals(!conflict, result.isSuccess());
+      assertEquals(conflict ? 0 : 1, fixture.tail.insertCalls);
+      if (conflict) assertTrue(result.getCause() instanceof UniqueConstraintViolationException);
+    }
+  }
+
+  @Test
+  void secondUniqueCheckFailureStopsTheInsertAndPreservesItsCause() {
     var fixture = new Fixture(List.of("id"));
-    DataModelPlugin plugin = fixture.buildPlugin(false);
-    fixture.count(where -> 0L);
+    var failure = new IllegalStateException("第二个唯一键查询失败");
+    when(fixture.stripped.count(anyMap())).thenReturn(Try.success(0L), Try.failure(failure));
+    var result = fixture.buildPlugin(false).insert(linkedMap("email", "alice@example.com", "code", "A001"), fixture.context);
+    assertTrue(result.isFailure());
+    assertEquals(failure, result.getCause());
+    assertEquals(0, fixture.tail.insertCalls);
+  }
 
-    Try<Record> result = plugin.insert(linkedMap("email", "alice@example.com", "code", "A001"), fixture.context);
-
-    assertTrue(result.isSuccess());
-    assertEquals(
-        linkedMap(
-            "or",
-            List.of(
-                linkedMap("email", "alice@example.com"),
-                linkedMap("code", "A001")
-            )
-        ),
-        fixture.lastCountWhere
-    );
+  @Test
+  void updateRejectsEitherIndependentUniqueConflictAndExcludesOnlyItself() {
+    var candidate = linkedMap("email", "next@example.com", "code", "NEXT");
+    for (var existing : List.of(linkedMap("id", 1L, "email", "next@example.com", "code", "NEXT"),
+        linkedMap("id", 2L, "email", "next@example.com", "code", "OTHER"),
+        linkedMap("id", 2L, "email", "other@example.com", "code", "NEXT"))) {
+      var fixture = new Fixture(List.of("id"));
+      fixture.count(where -> matches(where, existing) ? 1L : 0L);
+      var result = fixture.buildPlugin(false).update(and(eq("id", 1L)), candidate, fixture.context);
+      boolean conflict = !Long.valueOf(1L).equals(existing.get("id"));
+      assertEquals(!conflict, result.isSuccess());
+      assertEquals(conflict ? 0 : 1, fixture.tail.updateCalls);
+      if (conflict) assertTrue(result.getCause() instanceof UniqueConstraintViolationException);
+    }
   }
 
   @Test
@@ -157,7 +181,7 @@ class DuplicateDataCheckerDataModelPluginTest {
   }
 
   @Test
-  void insertKeepsFieldUniqueOrWhenModelLevelUniqueConstraintCoexists() {
+  void insertChecksFieldUniquenessAndCompositeUniquenessIndependently() {
     var fixture = new Fixture(List.of("id"));
     fixture.addUniqueConstraint("project_node_code", "projectId", "nodeCode");
     DataModelPlugin plugin = fixture.buildPlugin(false);
@@ -169,16 +193,18 @@ class DuplicateDataCheckerDataModelPluginTest {
     );
 
     assertTrue(result.isSuccess());
-    assertEquals(
-        linkedMap(
-            "or",
-            List.of(
-                linkedMap("email", "alice@example.com"),
-                linkedMap("projectId", 100L, "nodeCode", "N001")
-            )
-        ),
-        fixture.lastCountWhere
-    );
+    assertEquals(1, fixture.tail.insertCalls);
+    for (var existing : List.of(linkedMap("email", "alice@example.com", "projectId", 200L, "nodeCode", "OTHER"),
+        linkedMap("email", "other@example.com", "projectId", 100L, "nodeCode", "N001"))) {
+      var conflict = new Fixture(List.of("id"));
+      conflict.addUniqueConstraint("project_node_code", "projectId", "nodeCode");
+      conflict.count(where -> matches(where, existing) ? 1L : 0L);
+      var rejected = conflict.buildPlugin(false).insert(
+          linkedMap("email", "alice@example.com", "projectId", 100L, "nodeCode", "N001"), conflict.context);
+      assertTrue(rejected.isFailure());
+      assertTrue(rejected.getCause() instanceof UniqueConstraintViolationException);
+      assertEquals(0, conflict.tail.insertCalls);
+    }
   }
 
   @Test
@@ -205,7 +231,7 @@ class DuplicateDataCheckerDataModelPluginTest {
   }
 
   @Test
-  void batchInsertChecksDatabaseOnceThenUsesNextBatchInsert() {
+  void batchInsertPreservesDistinctRows() {
     var fixture = new Fixture(List.of("id"));
     DataModelPlugin plugin = fixture.buildPlugin(false);
     fixture.count(where -> 0L);
@@ -219,10 +245,34 @@ class DuplicateDataCheckerDataModelPluginTest {
     );
 
     assertTrue(result.isSuccess());
-    assertEquals(1, fixture.countCalls);
     assertEquals(1, fixture.tail.batchInsertCalls);
     assertEquals(0, fixture.tail.insertCalls);
     assertEquals(2, fixture.tail.batchInsertedRows.size());
+    assertEquals(List.of(linkedMap("email", "alice@example.com"), linkedMap("email", "bob@example.com")),
+        result.get().stream().map(record -> record.get("email")).map(email -> linkedMap("email", email)).toList());
+  }
+
+  @org.junit.jupiter.params.ParameterizedTest
+  @org.junit.jupiter.params.provider.ValueSource(booleans = {false, true})
+  void mixedScopesKeepDeletedGlobalKeysButReleaseActiveKeys(boolean batch) {
+    var fixture = new Fixture(List.of("id"));
+    fixture.hasPlugin("LogicalDelete");
+    when(fixture.source.getField("code").orElseThrow().getUniquenessScope())
+        .thenReturn(com.ouroboros.data.model.UniquenessScope.ACTIVE_RECORDS);
+    fixture.count(where -> "old@example.com".equals(where.get("email")) ? 1L : 0L);
+    when(fixture.search.count(anyMap())).thenReturn(Try.success(0L));
+    fixture.query(RecordList.of(List.of(linkedMap("email", "old@example.com", "code", "old", "isDeleted", true))));
+    var plugin = fixture.buildPlugin(true);
+    var allowed = linkedMap("email", "new@example.com", "code", "old");
+    var rejected = linkedMap("email", "old@example.com", "code", "new");
+
+    var success = batch ? plugin.batchInsert(List.of(allowed), fixture.context) : plugin.insert(allowed, fixture.context);
+    var conflict = batch ? plugin.batchInsert(List.of(rejected), fixture.context) : plugin.insert(rejected, fixture.context);
+
+    assertTrue(success.isSuccess());
+    assertTrue(conflict.isFailure());
+    assertEquals(List.of("email"), org.junit.jupiter.api.Assertions.assertInstanceOf(
+        UniqueConstraintViolationException.class, conflict.getCause()).getConflictFields());
   }
 
   @Test
@@ -314,6 +364,143 @@ class DuplicateDataCheckerDataModelPluginTest {
         ),
         fixture.lastCountWhere
     );
+  }
+
+  @Test
+  void updateCanClearNullableValueInCompositeUniqueConstraint() {
+    var fixture = new Fixture(List.of("id"));
+    fixture.addUniqueConstraint("template_name", "tenantId", "activeTemplateKey");
+    DataModelPlugin plugin = fixture.buildPlugin(false);
+    fixture.count(where -> 0L);
+
+    Try<Long> result = plugin.update(
+        and(eq("id", 1L)), linkedMap("tenantId", 1L, "activeTemplateKey", null), fixture.context);
+
+    assertTrue(result.isSuccess());
+    assertEquals(1, fixture.tail.updateCalls);
+    assertEquals(linkedMap("and", linkedMap("id", linkedMap("!=", 1L),
+        "tenantId", 1L, "activeTemplateKey", null)), fixture.lastCountWhere);
+  }
+
+  @Test
+  void partialUpdateLoadsNullableUniqueValuesWithoutLosingNull() {
+    var fixture = new Fixture(List.of("id"));
+    fixture.addUniqueConstraint("tenant_email", "tenant", "email");
+    fixture.addUniqueConstraint("tenant_code", "tenant", "code");
+    var plugin = fixture.buildPlugin(false);
+    fixture.query(RecordList.of(List.of(linkedMap("tenant", "A", "email", "first@example.com", "code", null))));
+    fixture.count(where -> 0L);
+
+    var result = plugin.update(and(eq("id", 1L)), linkedMap("email", "next@example.com"), fixture.context);
+
+    assertTrue(result.isSuccess(), () -> result.isFailure() ? result.getCause().toString() : "");
+    assertEquals(1, fixture.tail.updateCalls);
+    assertEquals(linkedMap("id", 1L), fixture.lastQueryWhere);
+    assertEquals(2, fixture.countCalls);
+  }
+
+  @Test
+  void declaredDistinctNullsAllowIndependentRowsAndBatchRows() {
+    var fixture = new Fixture(List.of("id"));
+    fixture.addUniqueConstraint("active_claim", "projectId", "nodeCode");
+    fixture.uniqueConstraints.getLast().setExtraProp("nullsDistinct", true);
+    var plugin = fixture.buildPlugin(false);
+    fixture.count(where -> 1L);
+    assertTrue(plugin.insert(linkedMap("projectId", 1L, "nodeCode", null), fixture.context).isSuccess());
+    assertTrue(plugin.batchInsert(List.of(linkedMap("projectId", 1L, "nodeCode", null),
+        linkedMap("projectId", 1L, "nodeCode", null)), fixture.context).isSuccess());
+  }
+
+  @Test
+  void declaredDistinctNullsAllowReleaseAndPartialUpdateOfAnAlreadyReleasedRow() {
+    var fixture = new Fixture(List.of("id"));
+    fixture.addUniqueConstraint("active_claim", "projectId", "nodeCode");
+    fixture.uniqueConstraints.getLast().setExtraProp("nullsDistinct", true);
+    var plugin = fixture.buildPlugin(false);
+    fixture.count(where -> 1L);
+    assertTrue(plugin.update(and(eq("id", 1L)), linkedMap("projectId", 1L, "nodeCode", null), fixture.context).isSuccess());
+    fixture.query(RecordList.of(List.of(linkedMap("projectId", 1L, "nodeCode", null))));
+    assertTrue(plugin.update(and(eq("id", 1L)), linkedMap("projectId", 2L), fixture.context).isSuccess());
+    assertEquals(2, fixture.tail.updateCalls);
+  }
+
+  @Test
+  void declaredDistinctNullsStillRejectRealClaimsAndKeepDefaultNullEquality() {
+    var fixture = new Fixture(List.of("id"));
+    fixture.addUniqueConstraint("active_claim", "projectId", "nodeCode");
+    fixture.uniqueConstraints.getLast().setExtraProp("nullsDistinct", true);
+    fixture.count(where -> 1L);
+    var distinct = fixture.buildPlugin(false);
+    assertTrue(distinct.insert(linkedMap("projectId", 1L, "nodeCode", "claimed"), fixture.context).isFailure());
+    assertTrue(distinct.update(and(eq("id", 1L)), linkedMap("projectId", 1L, "nodeCode", "claimed"), fixture.context).isFailure());
+    fixture.uniqueConstraints.getLast().setExtraProp("nullsDistinct", false);
+    var existingSemantics = fixture.buildPlugin(false);
+    assertTrue(existingSemantics.insert(linkedMap("projectId", 1L, "nodeCode", null), fixture.context).isFailure());
+  }
+
+  @Test
+  void typedDistinctNullDeclarationControlsRuntimeInsertBehavior() {
+    var fixture = new Fixture(List.of("id"));
+    var annotation = NullableClaimModel.class.getAnnotation(com.ouroboros.data.annotation.UniqueConstraint.class);
+    var decorated = new com.ouroboros.data.model.decorators.typed.UniqueConstraintAnnotationDecorator()
+        .decorate(NullableClaimModel.class, annotation, new com.ouroboros.data.model.DataModelMeta(), null);
+    fixture.uniqueConstraints.addAll(decorated.getUniqueConstraints());
+    fixture.count(where -> 1L);
+    var plugin = fixture.buildPlugin(false);
+
+    assertTrue(plugin.insert(linkedMap("projectId", 1L, "nodeCode", null), fixture.context).isSuccess());
+    assertTrue(plugin.insert(linkedMap("projectId", 1L, "nodeCode", "claimed"), fixture.context).isFailure());
+    assertEquals(1, fixture.tail.insertCalls);
+    assertEquals(1, fixture.countCalls);
+  }
+
+  @Test
+  void distinctNullDoesNotHideAnIncompleteUpdatedConstraint() {
+    var fixture = new Fixture(List.of("id"));
+    fixture.addUniqueConstraint("active_claim", "projectId", "nodeCode");
+    fixture.uniqueConstraints.getLast().setExtraProp("nullsDistinct", true);
+    fixture.query(RecordList.of(List.of(linkedMap("nodeCode", "claimed"))));
+    var result = fixture.buildPlugin(false).update(and(eq("id", 1L)), linkedMap("nodeCode", null), fixture.context);
+
+    assertTrue(result.isFailure());
+    assertTrue(result.getCause() instanceof InvalidStatementException);
+    assertEquals(0, fixture.tail.updateCalls);
+  }
+
+  @Test
+  void distinctNullRowsCannotIdentifyAnUpdateWithoutPrimaryKey() {
+    var fixture = new Fixture(List.of("id"));
+    fixture.addUniqueConstraint("active_claim", "projectId", "nodeCode");
+    fixture.uniqueConstraints.getLast().setExtraProp("nullsDistinct", true);
+    var nullCode = SExpression.<Boolean>create(Operators.EQ, SExpression.field("nodeCode"),
+        SExpression.create(Operators.CONSTANT, (Object) null));
+    var result = fixture.buildPlugin(false).update(and(eq("projectId", 1L), nullCode),
+        linkedMap("nodeCode", "claimed"), fixture.context);
+
+    assertTrue(result.isFailure());
+    assertTrue(result.getCause() instanceof InvalidStatementException);
+    assertEquals(0, fixture.tail.updateCalls);
+  }
+
+  @Test
+  void distinctNullSkipsOnlyItsOwnConstraintInMixedBatchAndDiagnostics() {
+    var fixture = new Fixture(List.of("id"));
+    fixture.addUniqueConstraint("active_claim", "projectId", "nodeCode");
+    fixture.uniqueConstraints.getLast().setExtraProp("nullsDistinct", true);
+    fixture.count(where -> 1L);
+    fixture.query(RecordList.of(List.of(linkedMap("projectId", 1L, "nodeCode", null, "email", "a@example.com"))));
+    var plugin = fixture.buildPlugin(true);
+    var result = plugin.insert(linkedMap("projectId", 1L, "nodeCode", null, "email", "a@example.com"), fixture.context);
+    assertTrue(result.isFailure());
+    assertEquals("字段email存在重复值，请检查!", result.getCause().getMessage());
+    assertTrue(plugin.batchInsert(List.of(linkedMap("projectId", 1L, "nodeCode", null, "email", "a@example.com"),
+        linkedMap("projectId", 1L, "nodeCode", null, "email", "a@example.com")), fixture.context).isFailure());
+    assertTrue(plugin.batchInsert(List.of(linkedMap("projectId", 1L, "nodeCode", "claimed"),
+        linkedMap("projectId", 1L, "nodeCode", "claimed")), fixture.context).isFailure());
+  }
+
+  @com.ouroboros.data.annotation.UniqueConstraint(fields = {"projectId", "nodeCode"}, nullsDistinct = true)
+  private static class NullableClaimModel {
   }
 
   @Test
@@ -477,6 +664,21 @@ class DuplicateDataCheckerDataModelPluginTest {
       map.put((String) pairs[i], pairs[i + 1]);
     }
     return map;
+  }
+
+  private static boolean matches(Object condition, Map<String, Object> record) {
+    if (condition instanceof List<?> conjunction) return conjunction.stream().allMatch(part -> matches(part, record));
+    if (!(condition instanceof Map<?, ?> fields)) throw new IllegalArgumentException("测试条件无效");
+    for (var entry : fields.entrySet()) {
+      if ("or".equals(entry.getKey()) && entry.getValue() instanceof List<?> branches) {
+        if (branches.stream().noneMatch(part -> matches(part, record))) return false;
+      } else if ("and".equals(entry.getKey())) {
+        if (!matches(entry.getValue(), record)) return false;
+      } else if (entry.getValue() instanceof Map<?, ?> comparison && comparison.containsKey("!=")) {
+        if (java.util.Objects.equals(record.get(entry.getKey()), comparison.get("!="))) return false;
+      } else if (!java.util.Objects.equals(record.get(entry.getKey()), entry.getValue())) return false;
+    }
+    return true;
   }
 
   private static SExpression<Boolean> eq(String field, Object value) {

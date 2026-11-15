@@ -14,15 +14,11 @@ import com.ouroboros.data.util.DataResources;
 public class KeywordsLoader {
   public static Map<String, Set<String>> loadKeywords(String fileName) {
     var resourceName = "META-INF/keywords/" + fileName;
-    return Try(() -> DataResources.getResourceContentLinesList(resourceName).stream()
-        .map(KeywordsLoader::loadKeywords)
-        .reduce(new HashMap<>(), (prev, curr) -> {
-          curr.forEach((k, v) -> prev.merge(k, v, (prevSet, currSet) -> {
-            prevSet.addAll(currSet);
-            return prevSet;
-          }));
-          return prev;
-        })).getOrElse(Collections::emptyMap);
+    // DataResources.getResourceContentLinesList 返回资源行（List<String>），
+    // 直接用 Stream 重载解析各行；不得把每一行再当作资源名递归加载，
+    // 否则空行会命中 "META-INF/keywords/" 目录资源造成无限递归。
+    return Try(() -> loadKeywords(DataResources.getResourceContentLinesList(resourceName).stream()))
+        .getOrElse(Collections::emptyMap);
   }
 
   private static Map<String, Set<String>> loadKeywords(Stream<String> lines) {

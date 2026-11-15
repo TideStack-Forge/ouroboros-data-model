@@ -3,6 +3,10 @@ package com.ouroboros.data.model;
 import java.util.*;
 import java.util.stream.Collectors;
 
+/**
+ * @deprecated 直接使用 {@link DataModelMeta}、{@link DataModelFieldMeta} 定义模型元数据。
+ */
+@Deprecated
 public class ModelMetaBuilder {
 
   private final DataModelMeta modelMeta;
@@ -101,6 +105,8 @@ public class ModelMetaBuilder {
     return modelMeta;
   }
 
+  /** @deprecated 使用 {@link DataModelMeta#setFields(List)}。 */
+  @Deprecated
   public class FieldsBuilder {
     List<DataModelFieldMeta> fields = new ArrayList<>();
 
@@ -178,6 +184,8 @@ public class ModelMetaBuilder {
       return ModelMetaBuilder.this;
     }
 
+    /** @deprecated 使用 {@link DataModelFieldMeta}。 */
+    @Deprecated
     public class FieldBuilder {
       private final DataModelFieldMeta fieldMeta;
 

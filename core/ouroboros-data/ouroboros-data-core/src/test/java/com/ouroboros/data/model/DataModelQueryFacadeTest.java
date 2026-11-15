@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.Mockito.CALLS_REAL_METHODS;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -21,9 +22,44 @@ import org.mockito.ArgumentCaptor;
 import io.vavr.control.Try;
 
 import com.ouroboros.data.dsl.statement.QueryStatement;
+import com.ouroboros.data.dsl.Keyword;
 import com.ouroboros.data.record.RecordList;
 
 class DataModelQueryFacadeTest {
+
+  @Test
+  void primaryKeyReadCombinesAdditionalConditionsWithoutReplacingTheId() {
+    AbstractDataModel model = mock(AbstractDataModel.class, CALLS_REAL_METHODS);
+    doReturn(Try.success(Map.of("id", 2L))).when(model).buildIdPredicate(2L);
+    List<Map<String, Object>> rows = List.of(
+        Map.of("id", 1L, "deleted", false),
+        Map.of("id", 2L, "deleted", true));
+    when(model.query(anyMap())).thenAnswer(call -> {
+      Map<String, Object> statement = call.getArgument(0);
+      return Try.success(RecordList.of(rows.stream()
+          .filter(row -> matches(row, Keyword.WHERE.findIn(statement))).toList()));
+    });
+
+    for (String key : List.of("where", "WHERE", "Where")) {
+      Map<String, Object> input = Map.of(key, Map.of("deleted", false));
+      assertNull(model.get(2L, input).get());
+      assertEquals(Map.of(key, Map.of("deleted", false)), input);
+      assertNull(model.get(2L, Map.of(key, Map.of("id", 1L))).get());
+    }
+    assertEquals(2L, model.get(2L, null).get().get("id"));
+    assertEquals(2L, model.get(2L).get().get("id"));
+  }
+
+  private boolean matches(Map<String, Object> row, Object predicate) {
+    if (!(predicate instanceof Map<?, ?> conditions)) {
+      return false;
+    }
+    if (conditions.get("$and") instanceof List<?> conjunction) {
+      return conjunction.stream().allMatch(condition -> matches(row, condition));
+    }
+    return conditions.entrySet().stream()
+        .allMatch(entry -> java.util.Objects.equals(row.get(entry.getKey()), entry.getValue()));
+  }
 
   @Test
   void executeShouldDelegateToRawMapQueryPath() {

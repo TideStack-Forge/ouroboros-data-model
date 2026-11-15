@@ -7,6 +7,8 @@ import org.apache.commons.lang3.StringUtils;
 import com.ouroboros.data.migration.datatype.DataTypeBuilder;
 import com.ouroboros.data.model.DataModel;
 import com.ouroboros.data.model.DataModelField;
+import com.ouroboros.data.model.DataModelUniqueConstraint;
+import com.ouroboros.data.model.DataModelUniqueConstraints;
 import com.ouroboros.data.model.valuetypes.RelatedValue;
 import com.ouroboros.data.util.DataServices;
 
@@ -116,6 +118,14 @@ public class TableBuilder {
     dataModel.getFields().stream()
         .filter(field -> UniqueConstraintScopePolicy.shouldMaterializeOrdinaryUniqueConstraint(dataModel, field))
         .map(field -> UniqueConstraintScopePolicy.buildOrdinaryUniqueConstraint(table, dataModel, field))
+        .forEach(uniqueList::add);
+    if (dataModel.getUniqueConstraints() == null || dataModel.getUniqueConstraints().isEmpty()) {
+      return;
+    }
+    DataModelUniqueConstraints.resolve(dataModel).stream()
+        .filter(constraint -> constraint.getSource() == DataModelUniqueConstraint.Source.MODEL)
+        .filter(constraint -> UniqueConstraintScopePolicy.shouldMaterializeModelUniqueConstraint(dataModel, table, constraint))
+        .map(constraint -> UniqueConstraintScopePolicy.buildModelUniqueConstraint(dataModel, table, constraint))
         .forEach(uniqueList::add);
   }
 }

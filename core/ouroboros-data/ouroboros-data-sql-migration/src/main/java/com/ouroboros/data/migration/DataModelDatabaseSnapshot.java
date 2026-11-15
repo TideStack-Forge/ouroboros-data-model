@@ -1,6 +1,7 @@
 package com.ouroboros.data.migration;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 
@@ -12,6 +13,7 @@ import com.ouroboros.data.model.DataModel;
 
 import liquibase.CatalogAndSchema;
 import liquibase.database.Database;
+import liquibase.database.core.H2Database;
 import liquibase.exception.DatabaseException;
 import liquibase.snapshot.DatabaseSnapshot;
 import liquibase.snapshot.InvalidExampleException;
@@ -66,7 +68,7 @@ public class DataModelDatabaseSnapshot extends DatabaseSnapshot {
     mergeObject(referenceObjects.get(View.class), false);
   }
 
-  private DatabaseObjectCollection getDatabaseObjectCollection(DatabaseSnapshot databaseSnapshot) {
+  static DatabaseObjectCollection getDatabaseObjectCollection(DatabaseSnapshot databaseSnapshot) {
     return (DatabaseObjectCollection) databaseSnapshot.getSerializableFieldValue("objects");
   }
 
@@ -84,14 +86,14 @@ public class DataModelDatabaseSnapshot extends DatabaseSnapshot {
   private void addOrMergeObject(DatabaseObject referenceObject, DatabaseObject furtheredObject) {
     if (furtheredObject == null) {
       if (referenceObject instanceof Column column) {
-        // 字段被删除，将nullable设置为true
+        // 主键列保留非空约束，其他删除列允许为空
         if (!column.isNullable()) {
           Column clone = new Column();
           clone.setName(column.getName());
           clone.setRelation(column.getRelation());
           clone.setType(column.getType());
           clone.setRemarks(column.getRemarks());
-          clone.setNullable(true);
+          clone.setNullable(!isPrimaryKeyColumn(column));
           clone.setOrder(column.getOrder());
 
           furtheredObjects.get(Table.class).stream()
@@ -132,7 +134,10 @@ public class DataModelDatabaseSnapshot extends DatabaseSnapshot {
           logger.error("字段类型不是DataType类型，新类型：{}，参考类型：{}", newAttrValue, referAttrValue);
           continue;
         }
-        // TODO: 完善类型兼容性判断
+        if (referenceObject instanceof Column existing && furtheredObject instanceof Column desired
+            && canWidenString(existing, desired)) {
+          continue;
+        }
         var isDataTypeCompatible = isDataTypeCompatible(newType, referType);
         if (!isDataTypeCompatible) {
           var table = furtheredObject.getAttribute("relation", null);
@@ -156,6 +161,64 @@ public class DataModelDatabaseSnapshot extends DatabaseSnapshot {
         furtheredObject.setAttribute(attribute, referAttrValue);
       }
     }
+  }
+
+  static boolean hasFieldOption(List<DataModel> models, Column column, String option) {
+    return models.stream().filter(model -> column.getRelation().getName().equalsIgnoreCase(model.getRawName()))
+        .flatMap(model -> model.getFields().stream())
+        .filter(field -> column.getName().equalsIgnoreCase(field.getRawName()))
+        .anyMatch(field -> field.getExtraProp(String.class, option).filter("true"::equals).isPresent());
+  }
+
+  private boolean canWidenString(Column existing, Column desired) {
+    if (!(isShortVarcharToText(existing.getType(), desired.getType())
+            || (getDatabase() instanceof H2Database && isShortVarchar(existing.getType())
+                && "CLOB".equalsIgnoreCase(desired.getType().getTypeName())))
+        || existing.getDefaultValue() != null || existing.getComputed() == Boolean.TRUE
+        || !Objects.equals(existing.isNullable(), desired.isNullable())
+        || (existing.getRemarks() != null && !existing.getRemarks().isBlank())
+        || !(existing.getRelation() instanceof Table source) || !(desired.getRelation() instanceof Table target)) {
+      return false;
+    }
+    return !isKeyColumn(source, existing) && !isKeyColumn(target, desired)
+        && hasFieldOption(models, desired, "allowVarcharToText");
+  }
+
+  static boolean isShortVarcharToText(DataType existing, DataType desired) {
+    return isShortVarchar(existing) && desired != null && "TEXT".equalsIgnoreCase(desired.getTypeName());
+  }
+
+  private static boolean isShortVarchar(DataType type) {
+    return type != null
+        && ("VARCHAR".equalsIgnoreCase(type.getTypeName()) || "CHARACTER VARYING".equalsIgnoreCase(type.getTypeName()))
+        && type.getColumnSize() != null && type.getColumnSize() > 0 && type.getColumnSize() < 1024;
+  }
+
+  private boolean isKeyColumn(Table table, Column column) {
+    return isPrimaryKeyColumn(column)
+        || table.getIndexes().stream().flatMap(index -> index.getColumns().stream()).anyMatch(c -> sameColumn(c, column))
+        || table.getUniqueConstraints().stream().flatMap(key -> key.getColumns().stream()).anyMatch(c -> sameColumn(c, column))
+        || table.getOutgoingForeignKeys().stream().flatMap(key -> key.getForeignKeyColumns().stream()).anyMatch(c -> sameColumn(c, column));
+  }
+
+  private boolean sameColumn(Column left, Column right) {
+    return right.getName().equalsIgnoreCase(left.getName());
+  }
+
+  private boolean isPrimaryKeyColumn(Column column) {
+    if (!(column.getRelation() instanceof Table table)) {
+      return false;
+    }
+
+    var primaryKey = table.getPrimaryKey();
+    if (primaryKey == null || primaryKey.getColumns() == null) {
+      return false;
+    }
+
+    return primaryKey.getColumns().stream().anyMatch(primaryKeyColumn ->
+        primaryKeyColumn == column
+            || (primaryKeyColumn.getName() != null
+            && primaryKeyColumn.getName().equalsIgnoreCase(column.getName())));
   }
 
   // 判断两种类型是否兼容

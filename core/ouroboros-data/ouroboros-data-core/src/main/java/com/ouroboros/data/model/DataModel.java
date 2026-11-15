@@ -111,6 +111,13 @@ public interface DataModel {
 
   Try<RecordList> query(QueryStatement statement);
 
+  /**
+   * 查询并锁定当前事务中匹配的记录，供一致性敏感的模型写操作使用。
+   */
+  default Try<RecordList> queryForUpdate(QueryStatement statement) {
+    return unsupportedNormalizedOperation("queryForUpdate(QueryStatement)");
+  }
+
   Try<RecordList> query(Map<String, Object> statement);
 
   default DataModelQuery query() {

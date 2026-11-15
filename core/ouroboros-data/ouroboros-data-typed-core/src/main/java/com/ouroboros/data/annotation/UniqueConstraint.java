@@ -17,4 +17,7 @@ public @interface UniqueConstraint {
   String[] fields();
 
   UniquenessScope scope() default UniquenessScope.DEFAULT;
+
+  /** When true, a complete key containing null does not claim uniqueness. */
+  boolean nullsDistinct() default false;
 }

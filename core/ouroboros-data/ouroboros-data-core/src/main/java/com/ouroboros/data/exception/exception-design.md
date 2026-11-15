@@ -2,45 +2,40 @@
 
 ## 异常体系层次结构
 
-```
-DataModelException (顶层，RuntimeException)
-├── StatementException (语句相关异常基类)
-│   ├── NormalizeException (Normalize阶段 - 形式化错误)
-│   │   ├── InvalidStatementException (无效语句)
-│   │   ├── InvalidEntityNameException (无效实体名)
-│   │   ├── StatementSyntaxException (语句语法错误)
-│   │   ├── InvalidFieldExpressionException (无效字段表达式)
-│   │   └── InvalidConditionException (无效条件表达式)
-│   │
-│   └── TranspileException (Transpile阶段 - 上下文错误)
-│       ├── EntityNotFoundException (实体不存在)
-│       ├── FieldNotFoundException (字段不存在)
-│       ├── TypeMismatchException (类型不匹配)
-│       ├── AmbiguousFieldException (字段歧义)
-│       └── InvalidJoinException (无效关联)
-│
-├── DataValidationException (数据校验异常基类)
-│   ├── RecordValidationException (记录校验失败，包含多字段错误)
-│   ├── FieldValidationException (单字段校验失败)
-│   ├── RequiredFieldMissingException (必填字段缺失)
-│   ├── PrimaryKeyValidationException (主键校验失败)
-│   ├── PrimaryKeyGenerationException (主键生成失败)
-│   ├── UniqueConstraintViolationException (唯一约束冲突)
-│   └── ReferenceConstraintViolationException (引用约束冲突)
-│
-├── MetadataException (元数据异常基类)
-│   ├── ModelMetadataException (模型元数据异常)
-│   └── FieldMetadataException (字段元数据异常)
-│
-├── MigrationException (数据库迁移异常基类)
-│   └── DatabaseMigrationException (数据库迁移执行异常)
-│
-└── DataAccessException (底层数据访问异常基类)
-    ├── DatabaseException (数据库异常包装)
-    ├── ConnectionException (连接异常)
-    ├── QueryExecutionException (查询执行异常)
-    ├── TransactionException (事务异常)
-    └── DataSourceException (数据源异常)
+```text
+DataModelException (RuntimeException)
+├── DataAccessException
+│   ├── ConnectionException
+│   ├── DatabaseException
+│   └── QueryExecutionException
+├── DataValidationException
+│   ├── PrimaryKeyGenerationException
+│   ├── PrimaryKeyValidationException
+│   ├── RecordValidationException
+│   │   └── ValidationException
+│   ├── ReferenceConstraintViolationException
+│   └── UniqueConstraintViolationException
+├── ExecuteException
+├── FieldValidationException
+├── MetadataException
+│   ├── FieldMetadataException
+│   └── ModelMetadataException
+├── MigrationException
+│   └── DatabaseMigrationException
+└── StatementException
+    ├── NormalizeException
+    │   ├── InvalidEntityNameException
+    │   ├── InvalidStatementException
+    │   ├── StatementError
+    │   │   ├── InvalidEntityName
+    │   │   ├── StatementCheckFailure
+    │   │   ├── ValuesError
+    │   │   └── ValuesListError
+    │   └── StatementSyntaxException
+    └── TranspileException
+        ├── EntityNotFoundException
+        ├── FieldNotFoundException
+        └── TypeMismatchException
 ```
 
 ## 异常类职责说明
@@ -69,7 +64,7 @@ DataModelException (顶层，RuntimeException)
 
 ### 2. 数据校验异常层 (DataValidationException)
 
-处理用户提交数据的业务规则校验错误。
+处理用户提交数据的业务规则校验错误。`FieldValidationException` 属于同一业务场景，但继承边界独立于本层。
 
 #### RecordValidationException
 
@@ -126,30 +121,8 @@ DataModelException (顶层，RuntimeException)
 - 提供迁移指南
 - 逐步替换旧异常使用
 
-## 迁移计划
+## 维护与边界
 
-### Phase 1: 定义新异常类
+继承关系以本包源类型为准；其中 `FieldValidationException` 直接继承 `DataModelException`，不能仅捕获 `DataValidationException` 就假定覆盖全部字段错误。旧 `ValidationException` 仍继承 `RecordValidationException`，是否继续迁移应按实际调用点安排。
 
-1. 创建新的异常类层次结构
-2. 添加详细的Javadoc说明
-3. 标记旧异常类为 @Deprecated
-
-### Phase 2: 替换核心模块
-
-1. DMLStatements.java - 语句构建异常
-2. QueryNormalizer.java - Normalize异常
-3. QueryTranspiler.java - Transpile异常
-4. AbstractDataModel.java - 数据校验异常
-5. DataAdapter实现 - 数据访问异常
-
-### Phase 3: 测试和验证
-
-1. 单元测试覆盖所有新异常
-2. 集成测试验证异常传播
-3. 错误消息国际化支持
-
-### Phase 4: 清理
-
-1. 删除 @Deprecated 的旧异常类
-2. 清理对 OuroborosException 的依赖
-3. 更新文档
+原阶段性迁移清单不代表当前完成状态，已退出本页；历史可从本文件 Git 记录追溯。本页只维护当前异常合同。内核异常在平台 API 边界的映射见 exception-mapper（平台适配器，不包含在此公开投影中）。

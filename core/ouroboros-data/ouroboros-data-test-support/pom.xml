@@ -15,10 +15,6 @@
     <dependencies>
         <dependency>
             <groupId>com.ouroboros</groupId>
-            <artifactId>ouroboros-data-builders</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.ouroboros</groupId>
             <artifactId>ouroboros-data-core</artifactId>
         </dependency>
         <dependency>

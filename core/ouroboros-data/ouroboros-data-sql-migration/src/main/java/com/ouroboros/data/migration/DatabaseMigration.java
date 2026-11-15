@@ -2,8 +2,9 @@ package com.ouroboros.data.migration;
 
 import java.io.*;
 import java.sql.Connection;
-import java.time.LocalDateTime;
-import java.time.ZoneOffset;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -22,6 +23,8 @@ import com.ouroboros.data.exception.DatabaseMigrationException;
 import com.ouroboros.data.model.DataModel;
 
 import liquibase.CatalogAndSchema;
+import liquibase.Contexts;
+import liquibase.LabelExpression;
 import liquibase.Liquibase;
 import liquibase.changelog.DatabaseChangeLog;
 import liquibase.database.Database;
@@ -47,6 +50,7 @@ import liquibase.structure.DatabaseObject;
 import liquibase.structure.core.*;
 
 public class DatabaseMigration {
+  private static final String REQUIRED_AFTER_BACKFILL = "requireAfterBackfill";
   private final static Logger logger = LoggerFactory.getLogger(DatabaseMigration.class);
 
   private final Class<? extends DatabaseObject>[] dataObjectTypes = new Class[]{
@@ -74,6 +78,7 @@ public class DatabaseMigration {
     this.database = Try.of(() ->
         DatabaseFactory.getInstance().findCorrectDatabaseImplementation(new JdbcConnection(connection))
     ).toJavaOptional().orElseThrow(() -> new ConnectionException("数据库连接初始化失败"));
+
   }
 
   /**
@@ -84,8 +89,8 @@ public class DatabaseMigration {
   @SuppressWarnings("deprecation")
   //TODO: liquibase 升级后需要修改为使用 CommandScope
   public Either<DataModelException, Void> migrate(List<DataModel> models) {
-    return prepareLiquibase(models).flatMap(lb -> Try.run(() -> {
-      lb.update(context);
+    return prepareLiquibase(models, true).flatMap(lb -> Try.run(() -> {
+      lb.update(StringUtils.isBlank(context) ? new Contexts() : new Contexts(context), new LabelExpression());
       connection.commit();
     }).toEither().mapLeft(e -> new DatabaseMigrationException("数据库迁移执行失败", e)));
   }
@@ -96,7 +101,7 @@ public class DatabaseMigration {
    * @return
    */
   public Either<DataModelException, List<String>> getMigrationSqls(List<DataModel> models) {
-    return prepareLiquibase(models).flatMap(liquibase -> Try.of(() -> {
+    return prepareLiquibase(models, false).flatMap(liquibase -> Try.of(() -> {
       return generateMigrationSqls(liquibase.getDatabaseChangeLog(), liquibase.getDatabase());
     }).toEither().mapLeft(e -> new DatabaseMigrationException("生成数据库迁移SQL失败", e)));
   }
@@ -124,12 +129,108 @@ public class DatabaseMigration {
    *
    * @return
    */
-  private Either<DataModelException, Liquibase> prepareLiquibase(List<DataModel> models) {
+  private Either<DataModelException, Liquibase> prepareLiquibase(
+      List<DataModel> models, boolean runUniqueConstraintPreflight) {
     return getCurrentSnapshot(models)
         .flatMap(cs -> getFurtheredSnapshot(models, cs).map(fs -> Tuple.of(cs, fs)))
         .flatMap(tuple -> diffSnapshot(tuple._1(), tuple._2()))
-        .flatMap(this::getChangeLog)
+        .flatMap(diff -> runUniqueConstraintPreflight
+            ? preflightNewUniqueConstraints(models, diff.getComparisonSnapshot(), diff).map(ignored -> diff)
+            : Either.right(diff))
+        .flatMap(diff -> getChangeLog(diff, models))
         .flatMap(this::buildLiquibase);
+  }
+
+  /**
+   * Check rows before Liquibase emits an ADD UNIQUE change.  Relying on the
+   * database error alone makes the failure opaque and varies by dialect; more
+   * importantly, it can leave a partially applied change log on databases that
+   * do not execute all DDL atomically.  Only constraints that are actually
+   * missing from the current snapshot are checked.
+   */
+  private Either<DataModelException, Void> preflightNewUniqueConstraints(
+      List<DataModel> models, DatabaseSnapshot currentSnapshot, DiffResult diff) {
+    try {
+      for (UniqueConstraint constraint : diff.getMissingObjects(UniqueConstraint.class)) {
+        if (constraint == null || constraint.getRelation() == null
+            || constraint.getColumns() == null || constraint.getColumns().isEmpty()) {
+          continue;
+        }
+        String tableName = constraint.getRelation().getName();
+        if (StringUtils.isBlank(tableName)
+            || models.stream().noneMatch(model -> tableName.equalsIgnoreCase(model.getRawName()))) {
+          continue;
+        }
+        // A missing table is created by the same change set; there cannot be
+        // historical rows to validate before that create operation.
+        var currentTable = currentSnapshot.get(Table.class).stream()
+            .filter(table -> tableName.equalsIgnoreCase(table.getName())).findFirst();
+        if (currentTable.isEmpty()) {
+          continue;
+        }
+        // New columns have no historical values to query before Liquibase adds them.
+        // Their constraints are applied by the generated migration after column creation.
+        if (constraint.getColumns().stream().anyMatch(column -> currentTable.get().getColumns().stream()
+            .noneMatch(existing -> column.getName().equalsIgnoreCase(existing.getName())))) {
+          continue;
+        }
+        DuplicateGroup duplicate = findDuplicateGroup(constraint);
+        if (duplicate != null) {
+          String message = "新增唯一约束前发现重复数据: table=" + tableName
+              + ", constraint=" + constraint.getName()
+              + ", key=" + duplicate.key() + ", count=" + duplicate.count();
+          logger.error(message);
+          return Either.left(new DatabaseMigrationException(message));
+        }
+      }
+      return Either.right(null);
+    } catch (SQLException ex) {
+      return Either.left(new DatabaseMigrationException("唯一约束重复数据预检失败", ex));
+    }
+  }
+
+  private DuplicateGroup findDuplicateGroup(UniqueConstraint constraint) throws SQLException {
+    CatalogAndSchema schema = getCatalogAndSchema();
+    String table = database.escapeTableName(
+        schema.getCatalogName(), schema.getSchemaName(), constraint.getRelation().getName());
+    String columns = constraint.getColumns().stream()
+        .map(column -> database.escapeColumnName(
+            schema.getCatalogName(), schema.getSchemaName(), constraint.getRelation().getName(),
+            column.getName()))
+        .collect(Collectors.joining(", "));
+    String nonNullPredicate = constraint.getColumns().stream()
+        .map(column -> database.escapeColumnName(
+            schema.getCatalogName(), schema.getSchemaName(), constraint.getRelation().getName(),
+            column.getName()) + " IS NOT NULL")
+        .collect(Collectors.joining(" AND "));
+    // All identifiers come from Liquibase's dialect-aware escaping helpers and the statement
+    // carries no value literals, so there is nothing to bind; the PreparedStatement is used
+    // only so the duplicated-check follows the same execution path as the other queries here.
+    StringBuilder sql = new StringBuilder("SELECT ");
+    sql.append(columns)
+        .append(", COUNT(*) AS duplicate_count FROM ")
+        .append(table)
+        .append(" WHERE ")
+        .append(nonNullPredicate)
+        .append(" GROUP BY ")
+        .append(columns)
+        .append(" HAVING COUNT(*) > 1");
+    try (PreparedStatement statement = connection.prepareStatement(sql.toString())) {
+      statement.setMaxRows(1);
+      try (ResultSet resultSet = statement.executeQuery()) {
+        if (!resultSet.next()) {
+          return null;
+        }
+        List<String> values = new ArrayList<>();
+        for (int index = 1; index <= constraint.getColumns().size(); index++) {
+          values.add(String.valueOf(resultSet.getObject(index)));
+        }
+        return new DuplicateGroup(String.join(",", values), resultSet.getLong("duplicate_count"));
+      }
+    }
+  }
+
+  private record DuplicateGroup(String key, long count) {
   }
 
   /**
@@ -161,6 +262,7 @@ public class DatabaseMigration {
     return Try.of(() -> {
       var newSnapshot = new DataModelDatabaseSnapshot(database, models);
       newSnapshot.mergeDatabaseSnapshot(currentSnapshot);
+      stageRequiredColumns(models, currentSnapshot, newSnapshot);
       return newSnapshot;
     }).toEither().mapLeft(e -> {
       if (e instanceof DataModelException dmException) {
@@ -169,6 +271,73 @@ public class DatabaseMigration {
 
       return new DatabaseMigrationException("生成目标数据库快照失败", e);
     });
+  }
+
+  private void stageRequiredColumns(List<DataModel> models, DatabaseSnapshot current, DataModelDatabaseSnapshot desired)
+      throws SQLException {
+    var currentObjects = DataModelDatabaseSnapshot.getDatabaseObjectCollection(current);
+    var desiredObjects = DataModelDatabaseSnapshot.getDatabaseObjectCollection(desired);
+    for (Column column : desiredObjects.get(Column.class)) {
+      if (!Boolean.FALSE.equals(column.isNullable())
+          || !DataModelDatabaseSnapshot.hasFieldOption(models, column, REQUIRED_AFTER_BACKFILL)) {
+        continue;
+      }
+      var source = currentObjects.get(Table.class).stream()
+          .filter(table -> table.getName().equalsIgnoreCase(column.getRelation().getName()))
+          .findFirst();
+      if (source.isEmpty()) { continue; } // A new table can be constrained immediately.
+      var existing = source.get().getColumns().stream().filter(c -> c.getName().equalsIgnoreCase(column.getName())).findFirst();
+      if (existing.isEmpty() || (!Boolean.FALSE.equals(existing.get().isNullable()) && containsNull(source.get(), column))) {
+        column.setNullable(true);
+      }
+    }
+  }
+
+  private boolean containsNull(Table table, Column column) throws SQLException {
+    var schema = getCatalogAndSchema();
+    var qualified = database.escapeTableName(schema.getCatalogName(), schema.getSchemaName(), table.getName());
+    var name = database.escapeColumnName(schema.getCatalogName(), schema.getSchemaName(), table.getName(), column.getName());
+    // Only dialect-escaped identifiers from the database snapshot enter this statement.
+    var sql = String.join(" ", "SELECT 1 FROM", qualified, "WHERE", name, "IS NULL");
+    try (var statement = connection.prepareStatement(sql)) {
+      statement.setMaxRows(1);
+      try (var rows = statement.executeQuery()) {
+        return rows.next();
+      }
+    }
+  }
+
+  public Either<DataModelException, Boolean> hasRequiredUniqueColumn(DataModel model, String columnName) {
+    return Try.of(() -> {
+      var metadata = connection.getMetaData();
+      var catalog = database.getDefaultCatalogName();
+      var schema = database.getDefaultSchemaName();
+      String table = database.correctObjectName(model.getRawName(), Table.class);
+      String physicalColumn = database.correctObjectName(columnName, Column.class);
+      boolean required = false;
+      try (var columns = metadata.getColumns(catalog, schema, table, physicalColumn)) {
+        while (columns.next()) {
+          if (table.equalsIgnoreCase(columns.getString("TABLE_NAME"))
+              && columnName.equalsIgnoreCase(columns.getString("COLUMN_NAME"))
+              && "NO".equals(columns.getString("IS_NULLABLE"))) {
+            required = true;
+            break;
+          }
+        }
+      }
+      if (!required) { return false; }
+      Map<String, List<String>> uniqueIndexes = new HashMap<>();
+      try (var indexes = metadata.getIndexInfo(catalog, schema, table, true, false)) {
+        while (indexes.next()) {
+          var name = indexes.getString("INDEX_NAME");
+          if (name != null && indexes.getString("FILTER_CONDITION") == null) {
+            uniqueIndexes.computeIfAbsent(name, ignored -> new ArrayList<>()).add(indexes.getString("COLUMN_NAME"));
+          }
+        }
+      }
+      return uniqueIndexes.values().stream()
+          .anyMatch(columns -> columns.size() == 1 && columnName.equalsIgnoreCase(columns.getFirst()));
+    }).toEither().mapLeft(error -> new DatabaseMigrationException("核验数据库字段约束失败", error));
   }
 
   /**
@@ -197,19 +366,20 @@ public class DatabaseMigration {
    * @param diff
    * @return
    */
-  private Either<DataModelException, DatabaseChangeLog> getChangeLog(DiffResult diff) {
-    var idRoot = "migration-" + LocalDateTime.now().toEpochSecond(ZoneOffset.of("+8"));
+  private Either<DataModelException, DatabaseChangeLog> getChangeLog(DiffResult diff, List<DataModel> models) {
+    var idRoot = nextInMemoryChangeSetIdRoot();
+    var changeLogPath = idRoot + ".xml";
     return Try.of(() -> {
-      var diffOutputControl = getDiffOutputControl();
+      var diffOutputControl = getDiffOutputControl(models);
       var diffToChangeLog = new CustomDiffToChangeLog(diff, diffOutputControl);
       diffToChangeLog.setChangeSetContext(context);
       diffToChangeLog.setChangeSetAuthor(author);
       diffToChangeLog.setIdRoot(idRoot);
-      diffToChangeLog.setChangeSetPath("in-memory-changelog");
+      diffToChangeLog.setChangeSetPath(changeLogPath);
 
       var databaseChangeLog = new DatabaseChangeLog();
-      databaseChangeLog.setLogicalFilePath("in-memory-changelog");
-      databaseChangeLog.setPhysicalFilePath("in-memory-changelog.xml");
+      databaseChangeLog.setLogicalFilePath(changeLogPath);
+      databaseChangeLog.setPhysicalFilePath(changeLogPath);
 
       diffToChangeLog.generateChangeSets().stream()
           .map(cs -> new ChangeSetWrapper(databaseChangeLog, cs))
@@ -222,6 +392,10 @@ public class DatabaseMigration {
       }
       return new DatabaseMigrationException("生成数据库变更日志失败", e);
     });
+  }
+
+  static String nextInMemoryChangeSetIdRoot() {
+    return "migration-" + System.currentTimeMillis() + "-" + UUID.randomUUID();
   }
 
   /**
@@ -270,13 +444,13 @@ public class DatabaseMigration {
    *
    * @return
    */
-  private DiffOutputControl getDiffOutputControl() {
+  private DiffOutputControl getDiffOutputControl(List<DataModel> models) {
     var control = new DiffOutputControl();
     if (database instanceof MSSQLDatabase) {
       control.setIncludeCatalog(false);
     }
 
-    control.setObjectChangeFilter(new DiffToChangeLogFilter());
+    control.setObjectChangeFilter(new DiffToChangeLogFilter(models));
     return control;
   }
 
@@ -317,6 +491,12 @@ public class DatabaseMigration {
   }
 
   private static class DiffToChangeLogFilter implements ObjectChangeFilter {
+    private final List<DataModel> models;
+
+    private DiffToChangeLogFilter() { this(List.of()); }
+
+    private DiffToChangeLogFilter(List<DataModel> models) { this.models = models; }
+
     private Set<Column> missingColumns = new HashSet<>();
     private Set<Table> missingTables = new HashSet<>();
 
@@ -350,7 +530,9 @@ public class DatabaseMigration {
         }
 
         if (nullable.getReferenceValue() instanceof Boolean refValue && !refValue) {
-          // TODO: 如果 nullable 从 true 变为 false，需要检查是否有数据，现在先一律忽略
+          if (DataModelDatabaseSnapshot.hasFieldOption(models, column, REQUIRED_AFTER_BACKFILL)) {
+            return true;
+          }
           logger.warn("字段 nullable 属性被忽略: {}", column.getName());
           return false;
         }

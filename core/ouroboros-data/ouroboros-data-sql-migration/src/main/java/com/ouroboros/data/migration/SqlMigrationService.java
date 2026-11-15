@@ -24,6 +24,11 @@ public interface SqlMigrationService {
   Either<DataModelException, List<String>> generateMigrationSql(DataSource dataSource, String context, String author,
                                                                 List<DataModel> dataModels);
 
+  default Either<DataModelException, Boolean> hasRequiredUniqueColumn(DataSource dataSource, DataModel model,
+      String rawColumnName) {
+    return Either.right(false);
+  }
+
   Either<DataModelException, Boolean> migrate(DataSource dataSource, String context, String author,
                                               List<DataModel> dataModels);
 }

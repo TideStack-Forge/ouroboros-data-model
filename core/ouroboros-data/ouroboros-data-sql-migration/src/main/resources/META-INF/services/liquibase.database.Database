@@ -1,1 +1,2 @@
 com.ouroboros.data.migration.kingbase.KingbaseDatabase
+com.ouroboros.data.migration.h2.H2IdentifierCaseDatabase

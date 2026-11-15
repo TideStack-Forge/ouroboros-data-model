@@ -128,3 +128,19 @@ tmp/
 /bug-fix-report.md
 /docs/reports/*-bug-*.md
 /docs/reports/*-e2e-*.md
+
+# 本地 docker 构建环境目录（preflight 镜像构建用）
+/.docker/
+
+### Open-source preparation: local inputs and generated records ###
+/.codestable/
+.env
+.env.*
+!.env.example
+/.workbuddy/
+/artifacts/
+/work/
+
+# These existing build entries are part of the source snapshot.
+!/build.sh
+!/update-version.sh

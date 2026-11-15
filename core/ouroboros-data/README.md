@@ -19,7 +19,7 @@ mvn -Ppublic -pl core/ouroboros-data/ouroboros-data-core,core/ouroboros-data/our
 - `ouroboros-data-typed-core`：typed annotation 与模型 contract。
 - `ouroboros-data-typed-meta-processor`：typed metadata annotation processor。
 - `ouroboros-data-pkgen-coding`：编码主键模板解析与 factory，依赖 `DataExpressionEvaluator` 和 `CodingSequencer` 公开端口。
-- `ouroboros-data-builders`：公开 builder 辅助能力。
+- `ouroboros-data-builders`：已弃用的 builder 辅助能力，新代码使用 data-core API。
 - `ouroboros-data-test-support`：公开测试 fixture 与辅助能力。
 
 runtime-backed 序列实现、脚本包装和雪花算法 adapter 不属于公开 coding 模块，必须由 adapter 提供。

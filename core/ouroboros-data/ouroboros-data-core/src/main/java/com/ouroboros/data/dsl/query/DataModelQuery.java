@@ -11,6 +11,7 @@ import com.ouroboros.data.record.RecordList;
 
 /**
  * Runtime-bound data model query facade.
+ * Plugin views are local to this mutable query; build() only returns query clauses.
  */
 public interface DataModelQuery {
 
@@ -67,6 +68,9 @@ public interface DataModelQuery {
   DataModelQuery withPlugins(PluginDescriptor... plugins);
 
   DataModelQuery withoutPlugins(String... pluginNames);
+
+  /** Remove all plugins from this query's model view. */
+  DataModelQuery withoutPlugins();
 
   Map<String, Object> build();
 

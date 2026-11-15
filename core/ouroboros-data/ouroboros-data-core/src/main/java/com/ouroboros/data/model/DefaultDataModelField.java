@@ -17,7 +17,7 @@ import com.ouroboros.data.validation.rules.NotEmpty;
 import com.ouroboros.data.validation.rules.NotNull;
 import com.ouroboros.data.expression.DataExpressionContext;
 import com.ouroboros.data.expression.DataExpressionEvaluator;
-import com.ouroboros.data.util.DataStrings;
+import com.ouroboros.util.Strings;
 
 public class DefaultDataModelField implements DataModelField {
   final static Logger logger = LoggerFactory.getLogger(DefaultDataModelField.class);
@@ -60,7 +60,7 @@ public class DefaultDataModelField implements DataModelField {
   @Override
   public String getRawName() {
     return StringUtils.isEmpty(fieldMeta.getRawName())
-        ? DataStrings.toSnakeCase(getName())
+        ? Strings.toSnakeCase(getName())
         : fieldMeta.getRawName();
   }
 

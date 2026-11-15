@@ -70,6 +70,52 @@ class TypedDataModelQueryFacadeTest {
     assertEquals(Map.of("WHERE", Map.of("active", false)), withoutPlugin.lastQueryStatement);
   }
 
+  @Test
+  void withoutAllPluginsShouldUseUnpluggedTypedViewAndKeepOtherQueriesIndependent() {
+    RecordingDataModel base = new RecordingDataModel(RecordList.empty());
+    RecordingDataModel withoutPlugin = new RecordingDataModel(RecordList.of(List.of(
+        Map.of("id", "u1", "username", "Ada"))));
+    base.withoutPluginsResult = withoutPlugin;
+    BaseTypedDataModel<String, User> users = new BaseTypedDataModel<>(base, User.class);
+    var originalQuery = users.query().where(field("active").eq(false));
+
+    var result = users.query()
+        .where(field("active").eq(true))
+        .withoutPlugins()
+        .execute();
+
+    assertTrue(result.isSuccess());
+    assertTrue(base.allPluginsRemoved);
+    assertEquals("Ada", result.get().get(0).getUsername());
+    assertEquals(Map.of("WHERE", Map.of("active", true)), withoutPlugin.lastQueryStatement);
+    originalQuery.execute().get();
+    assertEquals(Map.of("WHERE", Map.of("active", false)), base.lastQueryStatement);
+  }
+
+  @Test
+  void pluginViewsBeforeAndAfterQueryEntryShouldBeEquivalent() {
+    RecordingDataModel base = new RecordingDataModel(RecordList.empty());
+    RecordingDataModel withPlugin = new RecordingDataModel(RecordList.empty());
+    RecordingDataModel withoutPlugin = new RecordingDataModel(RecordList.empty());
+    base.withPluginsResult = withPlugin;
+    withPlugin.withoutPluginsResult = withoutPlugin;
+    BaseTypedDataModel<String, User> users = new BaseTypedDataModel<>(base, User.class);
+
+    users.withPlugins(new PluginDescriptor("Probe")).query()
+        .withoutPlugins("Probe")
+        .where(field("active").eq(true))
+        .execute().get();
+    var expected = withoutPlugin.lastQueryStatement;
+    users.query().where(field("active").eq(true))
+        .withPlugins(new PluginDescriptor("Probe"))
+        .withoutPlugins("Probe")
+        .execute().get();
+
+    assertEquals(expected, withoutPlugin.lastQueryStatement);
+    assertNull(base.lastQueryStatement);
+    assertNull(withPlugin.lastQueryStatement);
+  }
+
   public static class User {
     private String id;
     private String username;
@@ -98,6 +144,7 @@ class TypedDataModelQueryFacadeTest {
     private RecordingDataModel withoutPluginsResult;
     private List<String> withPluginsNames = Collections.emptyList();
     private List<String> withoutPluginNames = Collections.emptyList();
+    private boolean allPluginsRemoved;
 
     private RecordingDataModel(RecordList result) {
       this.result = result;
@@ -302,6 +349,7 @@ class TypedDataModelQueryFacadeTest {
 
     @Override
     public DataModel withoutPlugins() {
+      allPluginsRemoved = true;
       return withoutPluginsResult;
     }
 

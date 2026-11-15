@@ -90,6 +90,35 @@ class DataModelDatabaseSnapshotTest {
   }
 
   @Test
+  void shouldKeepRemovedPrimaryKeyColumnNotNullable() throws Exception {
+    var snapshot = newSnapshot();
+    var addOrMerge = DataModelDatabaseSnapshot.class.getDeclaredMethod(
+        "addOrMergeObject",
+        liquibase.structure.DatabaseObject.class,
+        liquibase.structure.DatabaseObject.class
+    );
+    addOrMerge.setAccessible(true);
+
+    var table = new Table("", "", "orders");
+    var removedPrimaryKeyColumn = column(table, "legacy_id");
+    removedPrimaryKeyColumn.setNullable(false);
+    var primaryKey = new liquibase.structure.core.PrimaryKey();
+    primaryKey.setName("PK_orders");
+    primaryKey.setTable(table);
+    primaryKey.addColumn(0, removedPrimaryKeyColumn);
+    table.setPrimaryKey(primaryKey);
+
+    addOrMerge.invoke(snapshot, removedPrimaryKeyColumn, null);
+
+    var objects = (DatabaseObjectCollection) snapshot.getSerializableFieldValue("objects");
+    var mergedColumn = objects.get(Column.class).stream()
+        .filter(column -> "legacy_id".equalsIgnoreCase(column.getName()))
+        .findFirst()
+        .orElseThrow();
+    assertFalse(mergedColumn.isNullable(), "a removed primary-key column must remain NOT NULL");
+  }
+
+  @Test
   void activeRecordsSnapshotShouldDropOnlyGeneratedSingleColumnUniqueConstraint() throws Exception {
     var snapshot = newSnapshot(stubModel(true, UniquenessScope.ACTIVE_RECORDS));
     var table = new Table("", "", "orders");

@@ -151,6 +151,7 @@ class ExceptionCoverageTest {
     assertEquals("model", new ModelMetadataException("msg", "model").getModelName());
     assertSame(cause, new ModelMetadataException("msg", "model", cause).getCause());
 
+    assertSame(cause, new UniqueConstraintViolationException("msg", Arrays.asList("code"), cause).getCause());
     var uniqueConstraintViolationException = new UniqueConstraintViolationException("msg");
     assertEquals(null, uniqueConstraintViolationException.getConflictFields());
     assertEquals(Arrays.asList("code"), new UniqueConstraintViolationException("msg", Arrays.asList("code")).getConflictFields());

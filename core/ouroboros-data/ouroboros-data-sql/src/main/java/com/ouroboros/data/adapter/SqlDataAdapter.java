@@ -22,6 +22,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataAccessResourceFailureException;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.jdbc.BadSqlGrammarException;
 import org.springframework.jdbc.core.*;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
@@ -30,6 +31,7 @@ import org.springframework.jdbc.datasource.DataSourceUtils;
 import org.springframework.jdbc.object.SqlUpdate;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.support.JdbcUtils;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import io.vavr.control.Try;
 
@@ -89,6 +91,9 @@ public class SqlDataAdapter extends AbstractDataAdapter {
   }
 
   private static DataModelException classifyException(String message, Exception e) {
+    if (e instanceof DuplicateKeyException) {
+      return new UniqueConstraintViolationException(message + ": 唯一约束冲突", null, e);
+    }
     if (e instanceof DataIntegrityViolationException) {
       return new DataValidationException(message + ": 数据完整性约束冲突", e);
     }
@@ -408,6 +413,55 @@ public class SqlDataAdapter extends AbstractDataAdapter {
   }
 
   @Override
+  public Try<RecordList> queryForUpdate(QueryMetadata metadata) {
+    return Try.of(() -> {
+      try {
+        requireTransactionBoundConnection();
+        validateJoinSupport(metadata);
+        var sql = new OuroborosSQLQuery(sqlTemplates, metadata)
+            .forUpdate()
+            .getSQL();
+        return query(sql.getSQL(), sql.getNullFriendlyBindings().toArray())
+            .getOrElseThrow(e -> e);
+      } catch (DataModelException e) {
+        throw e;
+      } catch (Exception e) {
+        throw classifyException("执行事务锁定查询时发生错误", e);
+      }
+    });
+  }
+
+  private void requireTransactionBoundConnection() throws SQLException {
+    if (!TransactionSynchronizationManager.isActualTransactionActive()) {
+      throw new QueryExecutionException("事务锁定查询必须在实际事务中执行");
+    }
+    if (!TransactionSynchronizationManager.hasResource(dataSource)) {
+      throw new QueryExecutionException("事务管理器未将当前数据源连接绑定到事务");
+    }
+    Connection connection = DataSourceUtils.getConnection(dataSource);
+    try {
+      if (!DataSourceUtils.isConnectionTransactional(connection, dataSource) || connection.getAutoCommit()) {
+        throw new QueryExecutionException("事务管理器未将当前数据源连接绑定到事务");
+      }
+    } finally {
+      DataSourceUtils.releaseConnection(connection, dataSource);
+    }
+  }
+
+  @Override
+  public Try<Object> requireTransactionResource() {
+    return Try.of(() -> {
+      requireTransactionBoundConnection();
+      Connection connection = DataSourceUtils.getConnection(dataSource);
+      try {
+        return connection;
+      } finally {
+        DataSourceUtils.releaseConnection(connection, dataSource);
+      }
+    });
+  }
+
+  @Override
   public Try<Long> count(QueryMetadata queryMetadata) {
     return Try.of(() -> {
       try {
@@ -549,7 +603,7 @@ public class SqlDataAdapter extends AbstractDataAdapter {
         while (rs.next()) {
           var record = new LinkedHashMap<String, Object>(columnCount);
           for (int i = 1; i <= columnCount; i++) {
-            record.put(fieldNames.get(i - 1), rs.getObject(i));
+            record.put(fieldNames.get(i - 1), JdbcUtils.getResultSetValue(rs, i));
           }
           recordList.add(record);
         }
@@ -775,7 +829,8 @@ public class SqlDataAdapter extends AbstractDataAdapter {
           }
           return list;
         } catch (SQLException e) {
-          throw new QueryExecutionException("执行批量插入时发生数据库错误", e);
+          var translated = jdbcTemplate.getExceptionTranslator().translate("batch insert", sql, e);
+          throw classifyException("执行批量插入时发生数据库错误", translated == null ? e : translated);
         } catch (Exception e) {
           throw classifyException("执行批量插入时发生错误", e);
         }

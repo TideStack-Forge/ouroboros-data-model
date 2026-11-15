@@ -98,6 +98,10 @@ public class DefaultDataModel extends AbstractDataModel {
 
   @Override
   public Try<Record> insert(Map<String, Object> data) {
+    Try<Void> participation = Try.run(() -> DataModelExecutionContext.beforeWrite(this));
+    if (participation.isFailure()) {
+      return Try.failure(participation.getCause());
+    }
     var insertRecordResult = buildInsertRecord(data);
     if (insertRecordResult.isFailure()) {
       return insertRecordResult;
@@ -144,6 +148,10 @@ public class DefaultDataModel extends AbstractDataModel {
   @Override
   @SuppressWarnings({"unchecked"})
   public Try<RecordList> batchInsert(List<Map<String, Object>> dataList) {
+    Try<Void> participation = Try.run(() -> DataModelExecutionContext.beforeWrite(this));
+    if (participation.isFailure()) {
+      return Try.failure(participation.getCause());
+    }
     if (ObjectUtils.isEmpty(dataList)) {
       return Try.success(RecordList.empty());
     }
@@ -289,6 +297,10 @@ public class DefaultDataModel extends AbstractDataModel {
 
   @Override
   public Try<Long> update(SExpression<Boolean> where, Map<String, Object> data) {
+    Try<Void> participation = Try.run(() -> DataModelExecutionContext.beforeWrite(this));
+    if (participation.isFailure()) {
+      return Try.failure(participation.getCause());
+    }
     TranspileContext dmlContext = createTranspileContext();
     return buildUpdateRecord(data)
         .flatMap(record -> DMLStatements.buildUpdateStatement(getFullName(), record, where))
@@ -304,6 +316,10 @@ public class DefaultDataModel extends AbstractDataModel {
 
   @Override
   public Try<Long> delete(SExpression<Boolean> where) {
+    Try<Void> participation = Try.run(() -> DataModelExecutionContext.beforeWrite(this));
+    if (participation.isFailure()) {
+      return Try.failure(participation.getCause());
+    }
     TranspileContext dmlContext = createTranspileContext();
     return DMLStatements.buildDeleteStatement(getFullName(), where)
         .flatMap(deleteStatement -> getAdapter().delete(deleteStatement, dmlContext));
@@ -398,6 +414,17 @@ public class DefaultDataModel extends AbstractDataModel {
   public Try<RecordList> query(QueryStatement statement) {
     return prepareQueryStatement(statement, "准备" + getFullName() + "模型的查询语句的时候发生错误，可能存在语法错误")
         .flatMap(this::orchestrateQuery);
+  }
+
+  @Override
+  public Try<RecordList> queryForUpdate(QueryStatement statement) {
+    return prepareQueryStatement(statement, "准备" + getFullName() + "模型的事务锁定查询时发生错误")
+        .flatMap(prepared -> {
+          TranspileContext context = createTranspileContext();
+          return context.getQueryTranspiler().applyWithContext(prepared, context)
+              .flatMap(adapter::queryForUpdate)
+              .map(this::convertRecordValues);
+        });
   }
 
   private Try<QueryStatement> prepareQueryStatement(QueryStatement statement, String message) {

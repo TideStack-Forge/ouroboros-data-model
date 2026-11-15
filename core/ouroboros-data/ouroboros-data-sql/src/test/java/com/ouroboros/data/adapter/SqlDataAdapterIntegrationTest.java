@@ -46,6 +46,32 @@ class SqlDataAdapterIntegrationTest {
   }
 
   @Test
+  void uniqueKeyAndOtherIntegrityFailuresRetainDifferentDomainSemantics() {
+    adapter.execute("INSERT INTO users(id, name, age) VALUES(?, ?, ?)", 1L, "first", 20).get();
+    var duplicate = adapter.insert(Long.class, "INSERT INTO users(id, name, age) VALUES(?, ?, ?)", 1L, "duplicate", 20);
+    assertTrue(duplicate.getCause() instanceof com.ouroboros.data.exception.UniqueConstraintViolationException);
+    assertTrue(duplicate.getCause().getCause() instanceof org.springframework.dao.DuplicateKeyException);
+    adapter.execute("ALTER TABLE users ADD CONSTRAINT nonnegative_age CHECK (age >= 0)").get();
+    var invalid = adapter.insert(Long.class, "INSERT INTO users(name, age) VALUES(?, ?)", "invalid", -1);
+    assertTrue(invalid.getCause() instanceof com.ouroboros.data.exception.DataValidationException);
+    assertFalse(invalid.getCause() instanceof com.ouroboros.data.exception.UniqueConstraintViolationException);
+  }
+
+  @Test
+  void rawBatchCallbackUsesTheOfficialUniqueAndIntegrityExceptionClassification() {
+    adapter.execute("INSERT INTO users(id, name, age) VALUES(?, ?, ?)", 1L, "first", 20).get();
+    var duplicate = adapter.batchInsert(Long.class, "INSERT INTO users(id, name, age) VALUES(?, ?, ?)",
+        List.of(List.of(1L, "duplicate", 20)));
+    assertTrue(duplicate.getCause() instanceof com.ouroboros.data.exception.UniqueConstraintViolationException);
+    assertTrue(duplicate.getCause().getCause() instanceof org.springframework.dao.DuplicateKeyException);
+    adapter.execute("ALTER TABLE users ADD CONSTRAINT positive_batch_age CHECK (age >= 0)").get();
+    var invalid = adapter.batchInsert(Long.class, "INSERT INTO users(id, name, age) VALUES(?, ?, ?)",
+        List.of(List.of(2L, "invalid", -1)));
+    assertTrue(invalid.getCause() instanceof com.ouroboros.data.exception.DataValidationException);
+    assertFalse(invalid.getCause() instanceof com.ouroboros.data.exception.UniqueConstraintViolationException);
+  }
+
+  @Test
   void shouldExecuteInsertQueryUpdateDeleteAndCount() {
     var inserted = adapter.execute(
         "INSERT INTO users(name, age, balance, active) VALUES(?, ?, ?, ?)",

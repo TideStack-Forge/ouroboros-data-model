@@ -198,7 +198,13 @@ public class BaseTypedDataModel<PK, M> implements TypedDataModel<PK, M> {
    * @return
    */
   private List<M> recordToModel(RecordList recordList) {
-    return ObjectUtils.isNotEmpty(recordList) ? recordList.toBeanList(getModelClass()) : Collections.emptyList();
+    if (ObjectUtils.isEmpty(recordList)) {
+      return Collections.emptyList();
+    }
+    return recordList.stream()
+        .filter(Objects::nonNull)
+        .map(this::recordToModel)
+        .collect(Collectors.toList());
   }
 
   /**

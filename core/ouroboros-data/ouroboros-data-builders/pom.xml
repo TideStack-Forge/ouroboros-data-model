@@ -12,6 +12,7 @@
 
     <artifactId>ouroboros-data-builders</artifactId>
     <packaging>jar</packaging>
+    <description>Deprecated builders. Use data-core query facades and model metadata APIs.</description>
 
     <dependencies>
         <dependency>

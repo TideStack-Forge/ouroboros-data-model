@@ -272,6 +272,13 @@ final class DefaultDataModelQuery implements DataModelQuery {
   }
 
   @Override
+  public DataModelQuery withoutPlugins() {
+    requireBoundModel();
+    dataModel = dataModel.withoutPlugins();
+    return this;
+  }
+
+  @Override
   public Map<String, Object> build() {
     Map<String, Object> rawMap = new LinkedHashMap<>();
     if (from != null) {

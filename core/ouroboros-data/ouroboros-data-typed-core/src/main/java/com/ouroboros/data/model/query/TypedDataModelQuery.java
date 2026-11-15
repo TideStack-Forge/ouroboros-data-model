@@ -74,6 +74,9 @@ public interface TypedDataModelQuery<PK, M> {
 
   TypedDataModelQuery<PK, M> withoutPlugins(String... pluginNames);
 
+  /** Remove all plugins from this query's model view. */
+  TypedDataModelQuery<PK, M> withoutPlugins();
+
   Map<String, Object> build();
 
   Try<List<M>> execute();

@@ -1,14 +1,14 @@
-# Public Forward Sync Dry Run Report
+# Public Export Dry Run Report
 
 ## Summary
 
 - Status: passed
-- Generated at: `2026-08-20T12:02:50.512607+00:00`
-- Mode: `sync`
+- Generated at: `2026-11-15T08:36:21.736029+00:00`
+- Mode: `dry-run`
 - Dry run flag: `False`
 - Source ref recorded in public tree: `false`
 - Manifest: `internal export manifest (not copied)`
-- Manifest SHA-256: `4e14ff7412b973929966184f3b362455f03c2c2e8297e3527ce97bc6cb601604`
+- Manifest SHA-256: `93ce24bc900d448bdc5ee19f29e4f1129956ccd1df5a59e086723c02231071e6`
 - Target: `public-tree-local-fixture`
 - Remote actions: none
 
@@ -17,7 +17,7 @@
 - Policy: `manifest-scoped-forward-sync`
 - Public history policy: `orphan-from-first-public-release`
 - Internal commit messages copied: no
-- Projection commit message: `Sync public data model projection`
+- Projection commit message: `Initial public data model dry-run export`
 - Target branch action: dry-run only
 - Remote push / merge / publish / release / deploy: not performed
 
@@ -42,6 +42,8 @@
 - `bom`
 - `core/pom.xml`
 - `core/ouroboros-data/pom.xml`
+- `libs/pom.xml`
+- `libs/util/ouroboros-util`
 
 ## Public Dependency Guard
 
@@ -58,6 +60,7 @@
 - `ouroboros-data-test-support`
 - `ouroboros-data-typed-core`
 - `ouroboros-data-typed-meta-processor`
+- `ouroboros-util`
 
 - Out-of-scope internal dependencies:
 
@@ -76,50 +79,17 @@
 #### stdout tail
 
 ```text
-ingual/target/jacoco.exec
-[INFO] 
-[INFO] <<< source:3.4.0:jar (default) < generate-sources @ ouroboros-root <<<
-[INFO] 
-[INFO] 
-[INFO] --- source:3.4.0:jar (default) @ ouroboros-root ---
-[INFO] 
-[INFO] --- jacoco:0.8.15:report (report) @ ouroboros-root ---
-[INFO] Skipping JaCoCo execution due to missing execution data file.
-[INFO] 
-[INFO] --------------------< com.ouroboros:ouroboros-data >--------------------
-[INFO] Building Ouroboros Data 2.0.0-rc.1-SNAPSHOT                        [2/2]
-[INFO]   from core/ouroboros-data/pom.xml
-[INFO] --------------------------------[ pom ]---------------------------------
-[INFO] 
-[INFO] --- checkstyle:3.6.0:check (validate) @ ouroboros-data ---
-[INFO] 开始检查……
-检查完成。
-[INFO] You have 0 Checkstyle violations.
-[INFO] 
-[INFO] --- enforcer:3.6.3:enforce (enforce-architecture) @ ouroboros-data ---
-[INFO] Rule 2: org.apache.maven.enforcer.rules.dependency.BannedDependencies passed
-[INFO] Rule 3: org.apache.maven.enforcer.rules.dependency.DependencyConvergence passed
-[INFO] 
-[INFO] >>> pmd:3.28.0:check (pmd-check) > :pmd @ ouroboros-data >>>
-[INFO] 
-[INFO] --- pmd:3.28.0:pmd (pmd) @ ouroboros-data ---
-[INFO] Skipping org.apache.maven.plugins:maven-pmd-plugin:3.28.0:pmd report goal
-[INFO] 
-[INFO] <<< pmd:3.28.0:check (pmd-check) < :pmd @ ouroboros-data <<<
-[INFO] 
-[INFO] 
-[INFO] --- pmd:3.28.0:check (pmd-check) @ ouroboros-data ---
-[INFO] 
-[INFO] --- jacoco:0.8.15:prepare-agent (prepare-agent) @ ouroboros-data ---
-[INFO] argLine set to -javaagent:$HOME/.m2/repository/org/jacoco/org.jacoco.agent/0.8.15/org.jacoco.agent-0.8.15-runtime.jar=destfile=$PUBLIC_TREE/core/ouroboros-data/target/jacoco.exec
-[INFO] 
-[INFO] --- resources:3.3.1:copy-resources (copy-metadata-sources) @ ouroboros-data ---
-[INFO] skip non existing resourceDirectory $PUBLIC_TREE/core/ouroboros-data/src/main/metadata
-[INFO] 
-[INFO] --- flatten:1.7.3:flatten (flatten) @ ouroboros-data ---
-[INFO] Generating flattened POM of project com.ouroboros:ouroboros-data:pom:2.0.0-rc.1-SNAPSHOT...
-[INFO] 
-[INFO] --- gplus:5.1.0:compileTests (default) @ ouroboros-data ---
+ from [public-central (https://repo.maven.apache.org/maven2/, default, releases+snapshots)]
+[INFO] Artifact org.codehaus.plexus:plexus-xml:jar:3.0.2 is present in the local repository, but cached from a remote repository ID that is unavailable in current build context, verifying that is downloadable from [public-central (https://repo.maven.apache.org/maven2/, default, releases+snapshots)]
+[INFO] Artifact org.apache.maven:maven-archiver:jar:3.6.6 is present in the local repository, but cached from a remote repository ID that is unavailable in current build context, verifying that is downloadable from [public-central (https://repo.maven.apache.org/maven2/, default, releases+snapshots)]
+[INFO] Artifact org.codehaus.plexus:plexus-interpolation:jar:1.29 is present in the local repository, but cached from a remote repository ID that is unavailable in current build context, verifying that is downloadable from [public-central (https://repo.maven.apache.org/maven2/, default, releases+snapshots)]
+[INFO] Artifact org.codehaus.plexus:plexus-xml:jar:3.0.2 is present in the local repository, but cached from a remote repository ID that is unavailable in current build context, verifying that is downloadable from [public-central (https://repo.maven.apache.org/maven2/, default, releases+snapshots)]
+Downloading from public-central: https://repo.maven.apache.org/maven2/org/apache/maven/maven-archiver/3.6.6/maven-archiver-3.6.6.jar
+Downloaded from public-central: https://repo.maven.apache.org/maven2/org/apache/maven/maven-archiver/3.6.6/maven-archiver-3.6.6.jar (0 B at 0 B/s)
+Downloading from public-central: https://repo.maven.apache.org/maven2/org/codehaus/plexus/plexus-interpolation/1.29/plexus-interpolation-1.29.jar
+Downloading from public-central: https://repo.maven.apache.org/maven2/org/codehaus/plexus/plexus-xml/3.0.2/plexus-xml-3.0.2.jar
+Downloaded from public-central: https://repo.maven.apache.org/maven2/org/codehaus/plexus/plexus-xml/3.0.2/plexus-xml-3.0.2.jar (0 B at 0 B/s)
+Downloaded from public-central: https://repo.maven.apache.org/maven2/org/codehaus/plexus/plexus-interpolation/1.29/plexus-interpolation-1.29.jar (0 B at 0 B/s)
 [INFO] No sources specified for compilation. Skipping.
 [INFO] 
 [INFO] --- jacoco:0.8.15:report (report) @ ouroboros-data ---
@@ -127,13 +97,13 @@ ingual/target/jacoco.exec
 [INFO] ------------------------------------------------------------------------
 [INFO] Reactor Summary for Ouroboros Root 2.0.0-rc.1-SNAPSHOT:
 [INFO] 
-[INFO] Ouroboros Root ..................................... SUCCESS [ 58.841 s]
-[INFO] Ouroboros Data ..................................... SUCCESS [  9.535 s]
+[INFO] Ouroboros Root ..................................... SUCCESS [01:32 min]
+[INFO] Ouroboros Data ..................................... SUCCESS [  4.544 s]
 [INFO] ------------------------------------------------------------------------
 [INFO] BUILD SUCCESS
 [INFO] ------------------------------------------------------------------------
-[INFO] Total time:  01:23 min
-[INFO] Finished at: 2026-08-20T20:00:28+08:00
+[INFO] Total time:  02:08 min
+[INFO] Finished at: 2026-11-15T16:35:17+08:00
 [INFO] ------------------------------------------------------------------------
 
 ```
@@ -153,12 +123,7 @@ NOTE: Picked up JDK_JAVA_OPTIONS: -javaagent:$HOME/.m2/repository/org/mockito/mo
 #### stdout tail
 
 ```text
-NFO] 开始检查……
-检查完成。
-[INFO] You have 0 Checkstyle violations.
-[INFO] 
-[INFO] --- enforcer:3.6.3:enforce (enforce-architecture) @ ouroboros-data-pkgen-coding ---
-[INFO] Rule 2: org.apache.maven.enforcer.rules.dependency.BannedDependencies passed
+forcer.rules.dependency.BannedDependencies passed
 [INFO] Rule 3: org.apache.maven.enforcer.rules.dependency.DependencyConvergence passed
 [INFO] 
 [INFO] >>> pmd:3.28.0:check (pmd-check) > :pmd @ ouroboros-data-pkgen-coding >>>
@@ -185,22 +150,23 @@ NFO] 开始检查……
 [INFO] ------------------------------------------------------------------------
 [INFO] Reactor Summary for Ouroboros Root 2.0.0-rc.1-SNAPSHOT:
 [INFO] 
-[INFO] Ouroboros Root ..................................... SUCCESS [ 13.575 s]
-[INFO] Ouroboros Data ..................................... SUCCESS [  1.352 s]
-[INFO] Ouroboros Data Core ................................ SUCCESS [01:00 min]
-[INFO] Ouroboros Data Typed Core .......................... SUCCESS [  5.789 s]
-[INFO] Ouroboros Data Plugins ............................. SUCCESS [  9.764 s]
-[INFO] Ouroboros Data Typed Meta Processor ................ SUCCESS [  2.091 s]
-[INFO] Ouroboros Data SQL Migration ....................... SUCCESS [  2.540 s]
-[INFO] Ouroboros Data SQL ................................. SUCCESS [ 10.261 s]
-[INFO] ouroboros-data-builders ............................ SUCCESS [  2.147 s]
-[INFO] ouroboros-data-test-support ........................ SUCCESS [  1.881 s]
-[INFO] ouroboros-data-pkgen-coding ........................ SUCCESS [  6.869 s]
+[INFO] Ouroboros Root ..................................... SUCCESS [  4.387 s]
+[INFO] Ouroboros Util Bundle .............................. SUCCESS [ 30.851 s]
+[INFO] Ouroboros Data ..................................... SUCCESS [  0.265 s]
+[INFO] Ouroboros Data Core ................................ SUCCESS [ 16.414 s]
+[INFO] Ouroboros Data Typed Core .......................... SUCCESS [  0.819 s]
+[INFO] Ouroboros Data Plugins ............................. SUCCESS [  1.585 s]
+[INFO] Ouroboros Data Typed Meta Processor ................ SUCCESS [  0.392 s]
+[INFO] Ouroboros Data SQL Migration ....................... SUCCESS [  1.764 s]
+[INFO] Ouroboros Data SQL ................................. SUCCESS [  1.799 s]
+[INFO] ouroboros-data-builders ............................ SUCCESS [  0.373 s]
+[INFO] ouroboros-data-test-support ........................ SUCCESS [  1.135 s]
+[INFO] ouroboros-data-pkgen-coding ........................ SUCCESS [  0.495 s]
 [INFO] ------------------------------------------------------------------------
 [INFO] BUILD SUCCESS
 [INFO] ------------------------------------------------------------------------
-[INFO] Total time:  02:00 min
-[INFO] Finished at: 2026-08-20T20:02:49+08:00
+[INFO] Total time:  01:01 min
+[INFO] Finished at: 2026-11-15T16:36:21+08:00
 [INFO] ------------------------------------------------------------------------
 
 ```

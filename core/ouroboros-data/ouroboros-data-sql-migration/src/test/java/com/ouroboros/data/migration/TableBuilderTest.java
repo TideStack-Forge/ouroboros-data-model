@@ -128,7 +128,7 @@ class TableBuilderTest {
   }
 
   @Test
-  void modelLevelUniqueConstraintsShouldNotBuildOrdinaryUniqueConstraint() {
+  void allRecordsModelLevelUniqueConstraintsBuildTableConstraints() {
     var id = field("id", "id", new IntegerValue(), null, null, false, true, false, true, null, "id");
     var name = field("name", "name", new StringValue(), null, 128, true, false, false, true, "display name", "name");
     var model = model(
@@ -138,6 +138,30 @@ class TableBuilderTest {
         Arrays.asList(id),
         UniquenessScope.ALL_RECORDS,
         Collections.singletonList(uniqueConstraint("model_name", "name"))
+    );
+    bindModel(id, model);
+    bindModel(name, model);
+
+    var table = TableBuilder.build(new H2Database(), model, new CatalogAndSchema(null, null));
+
+    assertEquals(1, table.getUniqueConstraints().size());
+    assertEquals("model_name", table.getUniqueConstraints().get(0).getName());
+    assertEquals("name", table.getUniqueConstraints().get(0).getColumns().get(0).getName());
+  }
+
+  @Test
+  void activeRecordsModelLevelUniqueConstraintsStayRuntimeOnly() {
+    var id = field("id", "id", new IntegerValue(), null, null, false, true, false, true, null, "id");
+    var name = field("name", "name", new StringValue(), null, 128, true, false, false, true, "display name", "name");
+    var constraint = uniqueConstraint("model_name", "name");
+    constraint.setScope(UniquenessScope.ACTIVE_RECORDS);
+    var model = model(
+        "demo.user",
+        "user",
+        Arrays.asList(id, name),
+        Arrays.asList(id),
+        UniquenessScope.ALL_RECORDS,
+        Collections.singletonList(constraint)
     );
     bindModel(id, model);
     bindModel(name, model);

@@ -15,6 +15,17 @@ import org.junit.jupiter.api.Test;
 class DataModelQueryBuilderTest {
 
   @Test
+  void standaloneQueryShouldRejectPluginViewsAndExecutionWithoutModelBinding() {
+    var query = Query.from("User");
+
+    assertThrows(NullPointerException.class, query::withoutPlugins);
+    assertThrows(NullPointerException.class, () -> query.withoutPlugins("Probe"));
+    assertThrows(NullPointerException.class, () -> query.withPlugins(
+        new com.ouroboros.data.model.PluginDescriptor("Probe")));
+    assertThrows(NullPointerException.class, query::execute);
+  }
+
+  @Test
   void buildShouldRenderSelectAndWhereConditionsAsCanonicalRawMap() {
     Map<String, Object> rawMap = Query.from("User")
         .select(field("id"), field("username"))

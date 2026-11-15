@@ -4,6 +4,11 @@ import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+/**
+ * @deprecated 使用 {@link com.ouroboros.data.model.DataModel#query()} 或
+ * {@link com.ouroboros.data.dsl.query.Query#from(String)} 构造查询。
+ */
+@Deprecated
 public class QueryBuilder {
   private final String from;
   private List<Map<String, String>> select;

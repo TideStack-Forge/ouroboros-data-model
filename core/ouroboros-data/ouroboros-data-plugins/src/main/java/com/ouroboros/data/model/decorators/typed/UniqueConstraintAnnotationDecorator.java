@@ -4,6 +4,7 @@ import java.util.Arrays;
 
 import com.ouroboros.data.annotation.UniqueConstraint;
 import com.ouroboros.data.model.DataModelMeta;
+import com.ouroboros.data.model.DataModelUniqueConstraint;
 import com.ouroboros.data.model.DataModelUniqueConstraintMeta;
 import com.ouroboros.data.model.TypedAnnotationDecoratorContext;
 import com.ouroboros.data.model.TypedModelAnnotationDecorator;
@@ -28,6 +29,7 @@ public class UniqueConstraintAnnotationDecorator implements TypedModelAnnotation
     constraint.setName(annotation.name());
     constraint.setFields(Arrays.asList(annotation.fields()));
     constraint.setScope(toExplicitScope(annotation.scope()));
+    constraint.setExtraProp(DataModelUniqueConstraint.NULLS_DISTINCT_EXTRA_PROP_NAME, annotation.nullsDistinct());
     decorated.addUniqueConstraint(constraint);
     return decorated;
   }

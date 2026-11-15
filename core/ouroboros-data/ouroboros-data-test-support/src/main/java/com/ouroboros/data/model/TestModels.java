@@ -5,6 +5,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import com.ouroboros.data.util.DataMaps;
+
 /**
  * 标准测试模型定义
  * <p>
@@ -51,17 +53,17 @@ public final class TestModels {
    * 字段：id, name, code
    */
   public static DataModelMeta departmentMeta() {
-    return ModelMetaBuilder.create(DEPARTMENT)
-        .table(TABLE_DEPARTMENT)
-        .label("部门")
-        .migrationStrategy(MigrationStrategy.AUTO)
-        .fields()
-        .longField("id").isPrimaryKey().autoIncrement().end()
-        .stringField("name").size(100).label("部门名称").end()
-        .stringField("code").size(50).label("部门编码").end()
-        .collectionField("users", USER, "departmentId").label("部门用户").end()
-        .end()
-        .build();
+    return DataMaps.tryToBean(DataModelMeta.class, Map.of(
+        "name", DEPARTMENT,
+        "rawName", TABLE_DEPARTMENT,
+        "label", "部门",
+        "migrationStrategy", MigrationStrategy.AUTO,
+        "primaryKeys", List.of("id"),
+        "fields", List.of(
+            Map.of("name", "id", "type", "Long", "isAutoIncrement", true),
+            Map.of("name", "name", "type", "String", "size", 100, "label", "部门名称"),
+            Map.of("name", "code", "type", "String", "size", 50, "label", "部门编码"),
+            Map.of("name", "users", "type", "Collection", "model", USER, "referenceKey", "departmentId", "label", "部门用户")))).get();
   }
 
   /**
@@ -70,26 +72,22 @@ public final class TestModels {
    * 字段：id, name, age, email, status, departmentId, createdAt, department(关联)
    */
   public static DataModelMeta userMeta() {
-    return ModelMetaBuilder.create(USER)
-        .table(TABLE_USER)
-        .label("用户")
-        .migrationStrategy(MigrationStrategy.AUTO)
-        .fields()
-        .longField("id").isPrimaryKey().autoIncrement().end()
-        .stringField("name").size(100).label("用户名").end()
-        .integerField("age").label("年龄").nullable().end()
-        .stringField("email").size(200).label("邮箱").nullable().end()
-        .stringField("status").size(20).label("状态").nullable().end()
-        .longField("departmentId").label("部门ID").end()
-        .dateTimeField("createdAt").label("创建时间").nullable().end()
-        // 正确的 modelField 定义：使用 key 指定源模型 FK，referenceKey 默认为目标模型主键
-        .field("department").type("Model")
-        .extraProp("model", DEPARTMENT)
-        .extraProp("key", "departmentId")  // 源模型 FK 字段
-        .label("所属部门").end()
-        .collectionField("orders", ORDER, "userId").label("用户订单").end()
-        .end()
-        .build();
+    return DataMaps.tryToBean(DataModelMeta.class, Map.of(
+        "name", USER,
+        "rawName", TABLE_USER,
+        "label", "用户",
+        "migrationStrategy", MigrationStrategy.AUTO,
+        "primaryKeys", List.of("id"),
+        "fields", List.of(
+            Map.of("name", "id", "type", "Long", "isAutoIncrement", true),
+            Map.of("name", "name", "type", "String", "size", 100, "label", "用户名"),
+            Map.of("name", "age", "type", "Integer", "label", "年龄", "isNullable", true),
+            Map.of("name", "email", "type", "String", "size", 200, "label", "邮箱", "isNullable", true),
+            Map.of("name", "status", "type", "String", "size", 20, "label", "状态", "isNullable", true),
+            Map.of("name", "departmentId", "type", "Long", "label", "部门ID"),
+            Map.of("name", "createdAt", "type", "DateTime", "label", "创建时间", "isNullable", true),
+            Map.of("name", "department", "type", "Model", "model", DEPARTMENT, "key", "departmentId", "label", "所属部门"),
+            Map.of("name", "orders", "type", "Collection", "model", ORDER, "referenceKey", "userId", "label", "用户订单")))).get();
   }
 
   /**
@@ -98,25 +96,21 @@ public final class TestModels {
    * 字段：id, userId, amount, status, createdAt, user(关联), orderItems(关联), reviews(关联)
    */
   public static DataModelMeta orderMeta() {
-    return ModelMetaBuilder.create(ORDER)
-        .table(TABLE_ORDER)
-        .label("订单")
-        .migrationStrategy(MigrationStrategy.AUTO)
-        .fields()
-        .longField("id").isPrimaryKey().autoIncrement().end()
-        .longField("userId").label("用户ID").end()
-        .doubleField("amount").label("金额").end()
-        .stringField("status").size(20).label("状态").end()
-        .dateTimeField("createdAt").label("创建时间").nullable().end()
-        // 正确的 modelField 定义：使用 key 指定源模型 FK，referenceKey 默认为目标模型主键
-        .field("user").type("Model")
-        .extraProp("model", USER)
-        .extraProp("key", "userId")  // 源模型 FK 字段
-        .label("所属用户").end()
-        .collectionField("orderItems", ORDER_ITEM, "orderId").label("订单明细").end()
-        .collectionField("reviews", REVIEW, "orderId").label("订单评论").end()
-        .end()
-        .build();
+    return DataMaps.tryToBean(DataModelMeta.class, Map.of(
+        "name", ORDER,
+        "rawName", TABLE_ORDER,
+        "label", "订单",
+        "migrationStrategy", MigrationStrategy.AUTO,
+        "primaryKeys", List.of("id"),
+        "fields", List.of(
+            Map.of("name", "id", "type", "Long", "isAutoIncrement", true),
+            Map.of("name", "userId", "type", "Long", "label", "用户ID"),
+            Map.of("name", "amount", "type", "Double", "label", "金额"),
+            Map.of("name", "status", "type", "String", "size", 20, "label", "状态"),
+            Map.of("name", "createdAt", "type", "DateTime", "label", "创建时间", "isNullable", true),
+            Map.of("name", "user", "type", "Model", "model", USER, "key", "userId", "label", "所属用户"),
+            Map.of("name", "orderItems", "type", "Collection", "model", ORDER_ITEM, "referenceKey", "orderId", "label", "订单明细"),
+            Map.of("name", "reviews", "type", "Collection", "model", REVIEW, "referenceKey", "orderId", "label", "订单评论")))).get();
   }
 
   /**
@@ -125,24 +119,21 @@ public final class TestModels {
    * 字段：id, orderId, productName, qty, price, amount, status, order(关联)
    */
   public static DataModelMeta orderItemMeta() {
-    return ModelMetaBuilder.create(ORDER_ITEM)
-        .table(TABLE_ORDER_ITEM)
-        .label("订单明细")
-        .migrationStrategy(MigrationStrategy.AUTO)
-        .fields()
-        .longField("id").isPrimaryKey().autoIncrement().end()
-        .longField("orderId").label("订单ID").end()
-        .stringField("productName").size(100).label("产品名称").end()
-        .integerField("qty").label("数量").end()
-        .doubleField("price").label("单价").end()
-        .doubleField("amount").label("金额").end()
-        .stringField("status").size(20).label("状态").end()
-        .field("order").type("Model")
-        .extraProp("model", ORDER)
-        .extraProp("key", "orderId")
-        .label("所属订单").end()
-        .end()
-        .build();
+    return DataMaps.tryToBean(DataModelMeta.class, Map.of(
+        "name", ORDER_ITEM,
+        "rawName", TABLE_ORDER_ITEM,
+        "label", "订单明细",
+        "migrationStrategy", MigrationStrategy.AUTO,
+        "primaryKeys", List.of("id"),
+        "fields", List.of(
+            Map.of("name", "id", "type", "Long", "isAutoIncrement", true),
+            Map.of("name", "orderId", "type", "Long", "label", "订单ID"),
+            Map.of("name", "productName", "type", "String", "size", 100, "label", "产品名称"),
+            Map.of("name", "qty", "type", "Integer", "label", "数量"),
+            Map.of("name", "price", "type", "Double", "label", "单价"),
+            Map.of("name", "amount", "type", "Double", "label", "金额"),
+            Map.of("name", "status", "type", "String", "size", 20, "label", "状态"),
+            Map.of("name", "order", "type", "Model", "model", ORDER, "key", "orderId", "label", "所属订单")))).get();
   }
 
   /**
@@ -151,104 +142,101 @@ public final class TestModels {
    * 字段：id, orderId, rating, score, comment, order(关联)
    */
   public static DataModelMeta reviewMeta() {
-    return ModelMetaBuilder.create(REVIEW)
-        .table(TABLE_REVIEW)
-        .label("评价")
-        .migrationStrategy(MigrationStrategy.AUTO)
-        .fields()
-        .longField("id").isPrimaryKey().autoIncrement().end()
-        .longField("orderId").label("订单ID").end()
-        .integerField("rating").label("评级").end()
-        .doubleField("score").label("评分").end()
-        .stringField("comment").size(500).label("评论").nullable().end()
-        .field("order").type("Model")
-        .extraProp("model", ORDER)
-        .extraProp("key", "orderId")
-        .label("所属订单").end()
-        .end()
-        .build();
+    return DataMaps.tryToBean(DataModelMeta.class, Map.of(
+        "name", REVIEW,
+        "rawName", TABLE_REVIEW,
+        "label", "评价",
+        "migrationStrategy", MigrationStrategy.AUTO,
+        "primaryKeys", List.of("id"),
+        "fields", List.of(
+            Map.of("name", "id", "type", "Long", "isAutoIncrement", true),
+            Map.of("name", "orderId", "type", "Long", "label", "订单ID"),
+            Map.of("name", "rating", "type", "Integer", "label", "评级"),
+            Map.of("name", "score", "type", "Double", "label", "评分"),
+            Map.of("name", "comment", "type", "String", "size", 500, "label", "评论", "isNullable", true),
+            Map.of("name", "order", "type", "Model", "model", ORDER, "key", "orderId", "label", "所属订单")))).get();
   }
 
   public static DataModelMeta logicalDeleteUserMeta() {
-    return ModelMetaBuilder.create(LOGICAL_DELETE_USER)
-        .table(TABLE_LOGICAL_DELETE_USER)
-        .label("逻辑删除用户")
-        .migrationStrategy(MigrationStrategy.AUTO)
-        .extraProps("enableSoftDelete", true)
-        .fields()
-        .longField("id").isPrimaryKey().autoIncrement().end()
-        .stringField("name").size(100).label("用户名").end()
-        .stringField("email").size(200).label("邮箱").nullable().end()
-        .end()
-        .build();
+    return DataMaps.tryToBean(DataModelMeta.class, Map.of(
+        "name", LOGICAL_DELETE_USER,
+        "rawName", TABLE_LOGICAL_DELETE_USER,
+        "label", "逻辑删除用户",
+        "migrationStrategy", MigrationStrategy.AUTO,
+        "enableSoftDelete", true,
+        "primaryKeys", List.of("id"),
+        "fields", List.of(
+            Map.of("name", "id", "type", "Long", "isAutoIncrement", true),
+            Map.of("name", "name", "type", "String", "size", 100, "label", "用户名"),
+            Map.of("name", "email", "type", "String", "size", 200, "label", "邮箱", "isNullable", true)))).get();
   }
 
   public static DataModelMeta archiveDeleteUserMeta() {
-    DataModelMeta meta = ModelMetaBuilder.create(ARCHIVE_DELETE_USER)
-        .table(TABLE_ARCHIVE_DELETE_USER)
-        .label("归档删除用户")
-        .migrationStrategy(MigrationStrategy.AUTO)
-        .fields()
-        .longField("id").isPrimaryKey().autoIncrement().end()
-        .stringField("name").size(100).label("用户名").end()
-        .stringField("email").size(200).label("邮箱").nullable().end()
-        .end()
-        .build();
+    DataModelMeta meta = DataMaps.tryToBean(DataModelMeta.class, Map.of(
+        "name", ARCHIVE_DELETE_USER,
+        "rawName", TABLE_ARCHIVE_DELETE_USER,
+        "label", "归档删除用户",
+        "migrationStrategy", MigrationStrategy.AUTO,
+        "primaryKeys", List.of("id"),
+        "fields", List.of(
+            Map.of("name", "id", "type", "Long", "isAutoIncrement", true),
+            Map.of("name", "name", "type", "String", "size", 100, "label", "用户名"),
+            Map.of("name", "email", "type", "String", "size", 200, "label", "邮箱", "isNullable", true)))).get();
     meta.addPluginDescriptor(buildArchiveDeletePlugin(ARCHIVE_DELETE_USER_ARCHIVE));
     return meta;
   }
 
   public static DataModelMeta archiveDeleteUserArchiveMeta() {
-    return ModelMetaBuilder.create(ARCHIVE_DELETE_USER_ARCHIVE)
-        .table(TABLE_ARCHIVE_DELETE_USER_ARCHIVE)
-        .label("用户归档表")
-        .migrationStrategy(MigrationStrategy.AUTO)
-        .fields()
-        .longField("id").isPrimaryKey().label("源主键").end()
-        .stringField("name").size(100).label("用户名").end()
-        .stringField("email").size(200).label("邮箱").nullable().end()
-        .stringField("sourceModel").size(200).label("源模型").end()
-        .stringField("sourceDataStation").size(100).label("源数据源").end()
-        .stringField("sourcePrimaryKey").size(1000).label("源主键JSON").end()
-        .dateTimeField("deletedAt").label("删除时间").end()
-        .stringField("deletedBy").size(100).label("删除人").nullable().end()
-        .stringField("deleteOperationId").size(64).label("删除操作ID").end()
-        .end()
-        .build();
+    return DataMaps.tryToBean(DataModelMeta.class, Map.of(
+        "name", ARCHIVE_DELETE_USER_ARCHIVE,
+        "rawName", TABLE_ARCHIVE_DELETE_USER_ARCHIVE,
+        "label", "用户归档表",
+        "migrationStrategy", MigrationStrategy.AUTO,
+        "primaryKeys", List.of("id"),
+        "fields", List.of(
+            Map.of("name", "id", "type", "Long", "label", "源主键"),
+            Map.of("name", "name", "type", "String", "size", 100, "label", "用户名"),
+            Map.of("name", "email", "type", "String", "size", 200, "label", "邮箱", "isNullable", true),
+            Map.of("name", "sourceModel", "type", "String", "size", 200, "label", "源模型"),
+            Map.of("name", "sourceDataStation", "type", "String", "size", 100, "label", "源数据源"),
+            Map.of("name", "sourcePrimaryKey", "type", "String", "size", 1000, "label", "源主键JSON"),
+            Map.of("name", "deletedAt", "type", "DateTime", "label", "删除时间"),
+            Map.of("name", "deletedBy", "type", "String", "size", 100, "label", "删除人", "isNullable", true),
+            Map.of("name", "deleteOperationId", "type", "String", "size", 64, "label", "删除操作ID")))).get();
   }
 
   public static DataModelMeta archiveDeleteRollbackUserMeta() {
-    DataModelMeta meta = ModelMetaBuilder.create(ARCHIVE_DELETE_ROLLBACK_USER)
-        .table(TABLE_ARCHIVE_DELETE_ROLLBACK_USER)
-        .label("归档回滚用户")
-        .migrationStrategy(MigrationStrategy.AUTO)
-        .fields()
-        .longField("id").isPrimaryKey().autoIncrement().end()
-        .stringField("name").size(100).label("用户名").end()
-        .stringField("email").size(200).label("邮箱").nullable().end()
-        .end()
-        .build();
+    DataModelMeta meta = DataMaps.tryToBean(DataModelMeta.class, Map.of(
+        "name", ARCHIVE_DELETE_ROLLBACK_USER,
+        "rawName", TABLE_ARCHIVE_DELETE_ROLLBACK_USER,
+        "label", "归档回滚用户",
+        "migrationStrategy", MigrationStrategy.AUTO,
+        "primaryKeys", List.of("id"),
+        "fields", List.of(
+            Map.of("name", "id", "type", "Long", "isAutoIncrement", true),
+            Map.of("name", "name", "type", "String", "size", 100, "label", "用户名"),
+            Map.of("name", "email", "type", "String", "size", 200, "label", "邮箱", "isNullable", true)))).get();
     meta.addPluginDescriptor(buildArchiveDeletePlugin(ARCHIVE_DELETE_ROLLBACK_USER_ARCHIVE));
     return meta;
   }
 
   public static DataModelMeta archiveDeleteRollbackUserArchiveMeta() {
-    return ModelMetaBuilder.create(ARCHIVE_DELETE_ROLLBACK_USER_ARCHIVE)
-        .table(TABLE_ARCHIVE_DELETE_ROLLBACK_USER_ARCHIVE)
-        .label("归档回滚用户归档表")
-        .migrationStrategy(MigrationStrategy.AUTO)
-        .fields()
-        .longField("id").isPrimaryKey().label("源主键").end()
-        .stringField("name").size(100).label("用户名").end()
-        .stringField("email").size(200).label("邮箱").nullable().end()
-        .stringField("sourceModel").size(200).label("源模型").end()
-        .stringField("sourceDataStation").size(100).label("源数据源").end()
-        .stringField("sourcePrimaryKey").size(1000).label("源主键JSON").end()
-        .dateTimeField("deletedAt").label("删除时间").end()
-        .stringField("deletedBy").size(100).label("删除人").rules("notNull").end()
-        .stringField("deleteOperationId").size(64).label("删除操作ID").end()
-        .end()
-        .build();
+    return DataMaps.tryToBean(DataModelMeta.class, Map.of(
+        "name", ARCHIVE_DELETE_ROLLBACK_USER_ARCHIVE,
+        "rawName", TABLE_ARCHIVE_DELETE_ROLLBACK_USER_ARCHIVE,
+        "label", "归档回滚用户归档表",
+        "migrationStrategy", MigrationStrategy.AUTO,
+        "primaryKeys", List.of("id"),
+        "fields", List.of(
+            Map.of("name", "id", "type", "Long", "label", "源主键"),
+            Map.of("name", "name", "type", "String", "size", 100, "label", "用户名"),
+            Map.of("name", "email", "type", "String", "size", 200, "label", "邮箱", "isNullable", true),
+            Map.of("name", "sourceModel", "type", "String", "size", 200, "label", "源模型"),
+            Map.of("name", "sourceDataStation", "type", "String", "size", 100, "label", "源数据源"),
+            Map.of("name", "sourcePrimaryKey", "type", "String", "size", 1000, "label", "源主键JSON"),
+            Map.of("name", "deletedAt", "type", "DateTime", "label", "删除时间"),
+            Map.of("name", "deletedBy", "type", "String", "size", 100, "label", "删除人", "rules", List.of("notNull")),
+            Map.of("name", "deleteOperationId", "type", "String", "size", 64, "label", "删除操作ID")))).get();
   }
 
   /**

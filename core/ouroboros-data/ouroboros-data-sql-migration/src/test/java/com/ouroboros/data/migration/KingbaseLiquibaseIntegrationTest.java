@@ -1,5 +1,6 @@
 package com.ouroboros.data.migration;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -28,6 +29,27 @@ import com.ouroboros.data.model.valuetypes.StringValue;
 class KingbaseLiquibaseIntegrationTest {
   private static final String TABLE_NAME = "codex_kingbase_liquibase_smoke";
   private static final String METADATA_TABLE_NAME = "codex_kingbase_metadata_smoke";
+
+  @Test
+  void shouldPreviewMigrationWithoutChangingExistingSchema() throws Exception {
+    var dataSource = KingbaseIntegrationEnvironment.requireDataSource();
+    try (var connection = dataSource.getConnection()) {
+      connection.setReadOnly(true);
+      connection.setAutoCommit(false);
+      try {
+        var preview = new DatabaseMigration(connection, "", "KingbaseLiquibaseIntegrationTest")
+            .getMigrationSqls(Collections.singletonList(model()));
+        assertTrue(preview.isRight(), () -> "read-only migration preview failed: " + preview.getLeft());
+        assertTrue(preview.get().stream().anyMatch(sql -> sql.startsWith("CREATE TABLE")));
+        try (var statement = connection.createStatement(); var rows = statement.executeQuery("SELECT 1")) {
+          assertTrue(rows.next());
+          assertEquals(1, rows.getInt(1));
+        }
+      } finally {
+        connection.rollback();
+      }
+    }
+  }
 
   @Test
   void shouldPreviewMigrateAndBecomeIdempotent() throws Exception {

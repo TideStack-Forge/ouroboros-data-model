@@ -87,6 +87,13 @@ public class LogicalDeleteDataModelPlugin implements DataModelPlugin {
         .build(), context);
   }
 
+  @Override
+  public Try<RecordList> queryForUpdate(QueryStatement statement, DataModelPluginContext context) {
+    return DataModelPlugin.super.queryForUpdate(statement.getBuilder()
+        .where(wrapLogicalDeleteFilter(statement.getWhere(), rootAlias(statement)))
+        .build(), context);
+  }
+
   private Map<String, Object> buildInsertData(Map<String, Object> data) {
     Map<String, Object> insertData = new LinkedHashMap<>(data);
     removeField(insertData, deletedAtField);

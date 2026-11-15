@@ -22,6 +22,7 @@ import org.junit.jupiter.api.Test;
 import com.ouroboros.data.exception.DataModelException;
 import com.ouroboros.data.model.DataModel;
 import com.ouroboros.data.model.DataModelField;
+import com.ouroboros.data.model.DataModelUniqueConstraintMeta;
 import com.ouroboros.data.model.MigrationStrategy;
 import com.ouroboros.data.model.UniquenessScope;
 import com.ouroboros.data.model.ValueType;
@@ -32,6 +33,25 @@ import com.ouroboros.data.model.valuetypes.StringValue;
 import io.vavr.control.Either;
 
 class UniqueConstraintScopeMigrationTest {
+
+  @Test
+  void allRecordsModelConstraintIsMaterializedAndDroppedWhenScopeChanges() throws Exception {
+    var tableName = tableName("codex_model_scope");
+    var dataSource = dataSource(tableName);
+    var constraintName = "uk_" + tableName + "_model_code";
+    var allRecords = modelWithConstraint(tableName, UniquenessScope.ALL_RECORDS, constraintName);
+    var activeRecords = modelWithConstraint(tableName, UniquenessScope.ACTIVE_RECORDS, constraintName);
+
+    assertRight(migrate(dataSource, allRecords));
+    assertTrue(uniqueExists(dataSource, tableName, constraintName));
+
+    var preview = migrationSqls(dataSource, activeRecords);
+    assertRight(preview);
+    assertTrue(containsSql(preview.get(), "DROP", "CONSTRAINT", constraintName));
+
+    assertRight(migrate(dataSource, activeRecords));
+    assertFalse(uniqueExists(dataSource, tableName, constraintName));
+  }
 
   @Test
   void allToActiveShouldDropGeneratedUniqueConstraintAndAllowDeletedDuplicate() throws Exception {
@@ -194,9 +214,30 @@ class UniqueConstraintScopeMigrationTest {
   }
 
   private static DataModel model(String tableName, UniquenessScope uniquenessScope, UniquenessScope fieldScope) {
+    return model(tableName, uniquenessScope, fieldScope, true, Collections.emptyList());
+  }
+
+  private static DataModel modelWithConstraint(
+      String tableName,
+      UniquenessScope uniquenessScope,
+      String constraintName) {
+    return model(
+        tableName,
+        uniquenessScope,
+        null,
+        false,
+        Collections.singletonList(uniqueConstraint(constraintName, uniquenessScope, "code")));
+  }
+
+  private static DataModel model(
+      String tableName,
+      UniquenessScope uniquenessScope,
+      UniquenessScope fieldScope,
+      boolean fieldUnique,
+      List<DataModelUniqueConstraintMeta> uniqueConstraints) {
     var owner = new DataModel[1];
     var id = field(owner, "id", "id", new IntegerValue(), false, false, true, null);
-    var code = field(owner, "code", "code", new StringValue(), false, true, false, 64, fieldScope);
+    var code = field(owner, "code", "code", new StringValue(), false, fieldUnique, false, 64, fieldScope);
     var isDeleted = field(owner, "isDeleted", "is_deleted", new BooleanValue(), false, false, false, null);
     var fields = Arrays.asList(id, code, isDeleted);
     var primaryKeys = Collections.singletonList(id);
@@ -223,6 +264,7 @@ class UniqueConstraintScopeMigrationTest {
               .filter(field -> field.getName().equals(String.valueOf(args[0])))
               .findFirst();
           case "getPrimaryKeys" -> primaryKeys;
+          case "getUniqueConstraints" -> uniqueConstraints;
           default -> defaultValue(method.getReturnType());
         });
     owner[0] = model;
@@ -278,6 +320,17 @@ class UniqueConstraintScopeMigrationTest {
 
   private static UniquenessScope activeScope() {
     return UniquenessScope.ACTIVE_RECORDS;
+  }
+
+  private static DataModelUniqueConstraintMeta uniqueConstraint(
+      String name,
+      UniquenessScope scope,
+      String... fields) {
+    var constraint = new DataModelUniqueConstraintMeta();
+    constraint.setName(name);
+    constraint.setScope(scope);
+    constraint.setFields(Arrays.asList(fields));
+    return constraint;
   }
 
   private static String tableName(String prefix) {

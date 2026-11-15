@@ -6,6 +6,7 @@ import java.util.Map;
 import io.vavr.control.Try;
 
 import com.ouroboros.data.dsl.statement.*;
+import com.ouroboros.data.exception.QueryExecutionException;
 import com.ouroboros.data.record.RecordList;
 import com.ouroboros.data.transpile.TranspileContext;
 import com.querydsl.core.QueryMetadata;
@@ -19,6 +20,14 @@ import com.querydsl.core.QueryMetadata;
  */
 @SuppressWarnings("unused")
 public interface DataAdapter {
+
+  /**
+   * Returns the opaque identity of the resource participating in the current commit.
+   * An adapter must prove actual participation; a transaction flag alone is insufficient.
+   */
+  default Try<Object> requireTransactionResource() {
+    return Try.failure(new QueryExecutionException("当前数据适配器无法证明事务资源参与"));
+  }
 
   /**
    * 插入一条数据（使用默认 Context）
@@ -168,6 +177,14 @@ public interface DataAdapter {
    * @return 结果列表
    */
   Try<RecordList> query(QueryMetadata queryMetadata);
+
+  /**
+   * 查询并锁定当前事务中匹配的记录，供需要准确识别写集的模型操作使用。
+   * 不支持行锁的适配器必须显式失败，不能退化为普通查询。
+   */
+  default Try<RecordList> queryForUpdate(QueryMetadata queryMetadata) {
+    return Try.failure(new QueryExecutionException("当前数据适配器不支持事务行锁查询"));
+  }
 
   /**
    * 查询数据（使用默认 Context）

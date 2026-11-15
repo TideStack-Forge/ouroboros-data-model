@@ -20,7 +20,7 @@ import com.ouroboros.data.exception.ValidationException;
 import com.ouroboros.data.record.Record;
 import com.ouroboros.data.record.RecordList;
 import com.ouroboros.data.util.DataMaps;
-import com.ouroboros.data.util.DataStrings;
+import com.ouroboros.util.Strings;
 
 public abstract class AbstractDataModel implements DataModel {
   protected final DataModelMeta meta;
@@ -127,7 +127,7 @@ public abstract class AbstractDataModel implements DataModel {
   @Override
   public String getRawName() {
     return StringUtils.isBlank(meta.getRawName())
-        ? DataStrings.toSnakeCase(getFullName().replaceAll("\\.", "_"))
+        ? Strings.toSnakeCase(getFullName().replaceAll("\\.", "_"))
         : meta.getRawName();
   }
 
@@ -140,8 +140,13 @@ public abstract class AbstractDataModel implements DataModel {
   @Override
   public Try<Record> get(Object id, Map<String, Object> statement) {
     return buildIdPredicate(id)
-        .map(m -> Collections.singletonMap(Keyword.WHERE.toString(), (Object) m))
-        .map(m -> DataMaps.merge(m, statement == null ? Collections.emptyMap() : statement))
+        .map(predicate -> {
+          Map<String, Object> query = statement == null ? new HashMap<>() : new HashMap<>(statement);
+          Object where = Keyword.WHERE.findIn(query);
+          query.keySet().removeIf(key -> Keyword.WHERE == Keyword.fromString(key));
+          query.put(Keyword.WHERE.toString(), where == null ? predicate : Map.of("$and", List.of(predicate, where)));
+          return query;
+        })
         .flatMap(this::query)
         .map(list -> list.isEmpty() ? null : list.get(0));
   }

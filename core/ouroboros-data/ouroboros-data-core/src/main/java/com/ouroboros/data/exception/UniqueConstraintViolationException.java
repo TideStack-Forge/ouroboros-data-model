@@ -22,6 +22,11 @@ public class UniqueConstraintViolationException extends DataValidationException 
     this.conflictFields = conflictFields;
   }
 
+  public UniqueConstraintViolationException(String message, List<String> conflictFields, Throwable cause) {
+    super(message, cause);
+    this.conflictFields = conflictFields;
+  }
+
   public List<String> getConflictFields() {
     return conflictFields;
   }

@@ -248,6 +248,41 @@ public class EnhancedDataModelProxyPluginCoverageTest {
   }
 
   @Test
+  public void queryFacadeWithoutAllPluginsShouldLeaveOriginalModelViewIntact() {
+    DataModel coreDataModel = createCoreDataModel();
+    EnhancedDataModelProxy proxy = createProxy(coreDataModel);
+
+    Try<RecordList> result = proxy.query()
+        .withoutPlugins()
+        .where(field("active").eq(true))
+        .execute();
+
+    assertTrue(result.isSuccess());
+    assertTrue(!ProbeDataModelPlugin.CALLS.contains("query"));
+    assertTrue(proxy.hasPlugin("Probe"));
+
+    proxy.query().where(field("active").eq(false)).execute().get();
+    assertTrue(ProbeDataModelPlugin.CALLS.contains("query"));
+    assertWhereContains(lastQueryStatement(), "active", false);
+  }
+
+  @Test
+  public void queryFacadeShouldAllowRemovingAndReaddingPluginWithoutLosingClauses() {
+    DataModel coreDataModel = createCoreDataModel();
+    EnhancedDataModelProxy proxy = createProxy(coreDataModel);
+
+    Try<RecordList> result = proxy.query()
+        .where(field("active").eq(true))
+        .withoutPlugins("Probe")
+        .withPlugins(new PluginDescriptor("Probe"))
+        .execute();
+
+    assertTrue(result.isSuccess());
+    assertEquals(1, ProbeDataModelPlugin.CALLS.stream().filter("query"::equals).count());
+    assertWhereContains(lastQueryStatement(), "active", true);
+  }
+
+  @Test
   public void typedQueryStatementShouldRouteThroughQueryPluginHook() {
     DataModel coreDataModel = createCoreDataModel();
     EnhancedDataModelProxy proxy = createProxy(coreDataModel);

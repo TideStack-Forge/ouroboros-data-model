@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -32,6 +33,7 @@ import com.ouroboros.data.orchestration.strategy.PopulateField;
 import com.ouroboros.data.orchestration.strategy.PopulateStrategy;
 import com.ouroboros.data.orchestration.strategy.PopulateStrategySelector;
 import com.ouroboros.data.record.RecordList;
+import com.ouroboros.data.util.DataServices;
 
 /**
  * 默认查询编排器
@@ -73,6 +75,8 @@ public class DefaultQueryOrchestrator implements QueryOrchestrator {
       new StatementRewriteCoordinator(relationConditionPlanner);
   private final StatementPreparer statementPreparer = new StatementPreparer();
   private final PopulatePlanner populatePlanner = new PopulatePlanner();
+  private final PopulateStrategySelector populateStrategySelector = Optional.ofNullable(
+      DataServices.getPrimaryService(PopulateStrategySelector.class)).orElseGet(DefaultPopulateStrategySelector::new);
 
   @Override
   public Try<RecordList> orchestrate(
@@ -168,11 +172,10 @@ public class DefaultQueryOrchestrator implements QueryOrchestrator {
 
     // 4. 为每个 POPULATE 字段创建步骤，分离 rewrite steps 和 populate steps
     List<PopulateField> populateFields = populatePlanner.extractPopulateFields(context, rootModel);
-    PopulateStrategySelector selector = new DefaultPopulateStrategySelector();
     List<QueryStep> populatePostSteps = new ArrayList<>();
     boolean hasPopulateRewriteSteps = false;
     for (PopulateField field : populateFields) {
-      PopulateStrategy strategy = selector.select(field);
+      PopulateStrategy strategy = populateStrategySelector.select(field);
       List<QueryStep> strategySteps = strategy.createSteps(field, "main");
       for (QueryStep step : strategySteps) {
         if (step instanceof StatementRewriteStep) {

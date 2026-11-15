@@ -26,7 +26,7 @@ English documentation: [`public-api.en.md`](public-api.en.md)
 - `ouroboros-data-sql` 负责 SQL 查询与写入执行，并显式组合 `ouroboros-data-sql-migration` 以保留既有迁移 API。
 - `ouroboros-data-sql-migration` 负责 schema-changing migration 实现，不反向依赖 SQL 查询模块。
 - `ouroboros-data-pkgen-coding` 负责编码主键工厂，并使用 `ouroboros-data-core` 定义的表达式端口。
-- `ouroboros-data-builders` 和 `ouroboros-data-test-support` 在依赖仍为公开模块时提供构建与测试辅助能力。
+- `ouroboros-data-builders` 已弃用；新代码使用 data-core 查询门面与模型元数据 API。`ouroboros-data-test-support` 提供公开测试辅助能力。
 
 ## 暂缓或 runtime-owned 边界
 

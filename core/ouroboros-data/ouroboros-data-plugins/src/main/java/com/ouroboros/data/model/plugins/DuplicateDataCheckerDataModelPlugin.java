@@ -20,7 +20,6 @@ import com.ouroboros.data.exception.UniqueConstraintViolationException;
 import com.ouroboros.data.model.*;
 import com.ouroboros.data.record.Record;
 import com.ouroboros.data.record.RecordList;
-import com.ouroboros.data.util.DataMaps;
 
 /**
  * @author liansz
@@ -48,104 +47,26 @@ public class DuplicateDataCheckerDataModelPlugin implements DataModelPlugin {
 
   @Override
   public Try<Record> insert(Map<String, Object> data, DataModelPluginContext context) {
-    if (!uniqueConstraints.isEmpty()) {
-      Map<String, Object> where = buildUniqueCheckConditions(data);
-
-      // TODO: 对于通过默认值生成的键值，可能会导致重复，目前先不做检查
-      if (where.isEmpty()) {
-        return DataModelPlugin.super.insert(data, context);
-      }
-      DataModel checkDataModel = uniquenessCheckDataModel();
-      Try<Long> countResult = checkDataModel.count(where)
-          .onFailure(e -> logger.error(String.format("数据模型 %s 查询数据错误: ", dataModel.getFullName()), e));
-      if (countResult.isFailure()) {
-        return Try.failure(countResult.getCause());
-      }
-      Long count = countResult.get();
-      if (count > 0) {
-        if (notifyDuplicateFields) {
-          Map<String, Object> statement = new HashMap<>();
-          statement.put(Keyword.WHERE.toString(), where);
-          statement.put(Keyword.LIMIT.toString(), 1);
-
-          var queryResult = checkDataModel.query(statement);
-          if (queryResult.isFailure()) {
-            return Try.failure(queryResult.getCause());
-          }
-
-          RecordList records = queryResult.get();
-          if (!records.isEmpty()) {
-            var duplicateFields = records.stream()
-                .flatMap(record -> getDuplicateFieldLabels(data, record).stream())
-                .distinct()
-                .collect(Collectors.toList());
-            if (!duplicateFields.isEmpty()) {
-              return Try.failure(new UniqueConstraintViolationException(
-                  String.format("字段%s存在重复值，请检查!", String.join(",", duplicateFields)),
-                  duplicateFields
-              ));
-            }
-          }
-        }
-
-        return Try.failure(new UniqueConstraintViolationException("存在重复字段，请检查!"));
-      }
+    var checked = checkUniqueConditions(uniqueCheckConditions(data), Collections.emptyMap(), List.of(data));
+    if (checked.isFailure()) {
+      return Try.failure(checked.getCause());
     }
-
     return DataModelPlugin.super.insert(data, context);
   }
 
   @Override
   public Try<RecordList> batchInsert(List<Map<String, Object>> dataList, DataModelPluginContext context) {
-    if (uniqueConstraints.isEmpty()) {
-      return context.getNextPlugin().batchInsert(dataList, context.getNextPluginContext());
-    }
-
     List<String> duplicateFields = getBatchDuplicateFieldLabels(dataList);
     if (!duplicateFields.isEmpty()) {
       return Try.failure(new UniqueConstraintViolationException(
-          String.format("字段%s存在重复值，请检查!", String.join(",", duplicateFields)),
-          duplicateFields
-      ));
+          String.format("字段%s存在重复值，请检查!", String.join(",", duplicateFields)), duplicateFields));
     }
-
-    Map<String, Object> where = combineOr(dataList.stream()
-        .map(this::buildUniqueCheckConditions)
-        .filter(condition -> !condition.isEmpty())
-        .collect(Collectors.toList()));
-    if (!where.isEmpty()) {
-      DataModel checkDataModel = uniquenessCheckDataModel();
-      Try<Long> countResult = checkDataModel.count(where)
-          .onFailure(e -> logger.error(String.format("数据模型 %s 查询数据错误: ", dataModel.getFullName()), e));
-      if (countResult.isFailure()) {
-        return Try.failure(countResult.getCause());
-      }
-      Long count = countResult.get();
-      if (count > 0) {
-        if (notifyDuplicateFields) {
-          Map<String, Object> statement = new HashMap<>();
-          statement.put(Keyword.WHERE.toString(), where);
-          statement.put(Keyword.LIMIT.toString(), 1);
-
-          var queryResult = checkDataModel.query(statement);
-          if (queryResult.isFailure()) {
-            return Try.failure(queryResult.getCause());
-          }
-
-          List<String> fields = duplicateFieldsForBatch(dataList, queryResult.get());
-          if (!fields.isEmpty()) {
-            return Try.failure(new UniqueConstraintViolationException(
-                String.format("字段%s存在重复值，请检查!", String.join(",", fields)),
-                fields
-            ));
-          }
-        }
-
-        return Try.failure(new UniqueConstraintViolationException("存在重复字段，请检查!"));
-      }
+    var conditions = dataList.stream().flatMap(data -> uniqueCheckConditions(data).stream()).toList();
+    var checked = checkUniqueConditions(conditions, Collections.emptyMap(), dataList);
+    if (checked.isFailure()) {
+      return Try.failure(checked.getCause());
     }
-
-    return context.getNextPlugin().batchInsert(dataList, context.getNextPluginContext());
+    return DataModelPlugin.super.batchInsert(dataList, context);
   }
 
   @Override
@@ -170,7 +91,7 @@ public class DuplicateDataCheckerDataModelPlugin implements DataModelPlugin {
         );
       }
 
-      DataModel checkDataModel = uniquenessCheckDataModel();
+      DataModel checkDataModel = uniquenessCheckDataModel(UniquenessScope.ACTIVE_RECORDS);
       var baseUniqueValuesResult = buildBaseUniqueValues(
           checkDataModel,
           affectedConstraints,
@@ -191,86 +112,85 @@ public class DuplicateDataCheckerDataModelPlugin implements DataModelPlugin {
       if (updateConditionResult.isFailure()) {
         return Try.failure(updateConditionResult.getCause());
       }
-      Map<String, Object> uniqueCondition = updateConditionResult.get();
+      List<UniqueCheck> uniqueConditions = updateConditionResult.get();
+      if (uniqueConditions.isEmpty()) {
+        return DataModelPlugin.super.update(where, data, context);
+      }
       Map<String, Object> exclusionWhere = buildExclusionConditions(
           hasCompletePrimaryKey ? primaryKeyWhere : uniqueIdentityWhere.get()
       );
-      Map<String, Object> countWhere = combineAnd(exclusionWhere, uniqueCondition);
-      Try<Long> countResult = checkDataModel.count(countWhere)
-          .onFailure(e -> logger.error(String.format("数据模型 %s 查询数据错误: ", dataModel.getFullName()), e));
-      if (countResult.isFailure()) {
-        return Try.failure(countResult.getCause());
-      }
-      Long count = countResult.get();
-      if (count > 0) {
-        if (notifyDuplicateFields) {
-          Map<String, Object> statement = new HashMap<>();
-          statement.put(Keyword.WHERE.toString(), countWhere);
-          statement.put(Keyword.LIMIT.toString(), 1);
-
-          var either = checkDataModel.query(statement);
-          if (either.isFailure()) {
-            return Try.failure(either.getCause());
-          }
-
-          RecordList records = either.get();
-          if (!records.isEmpty()) {
-            var duplicateFields = records.stream()
-                .flatMap(record -> getDuplicateFieldLabels(data, record).stream())
-                .distinct()
-                .collect(Collectors.toList());
-            if (!duplicateFields.isEmpty()) {
-              return Try.failure(
-                  new UniqueConstraintViolationException(
-                      String.format("字段%s存在重复值，请检查!", String.join(",", duplicateFields)),
-                      duplicateFields
-                  )
-              );
-            }
-          }
-        }
-
-        return Try.failure(new UniqueConstraintViolationException("存在重复字段，请检查!"));
+      Map<String, Object> updatedValues = new LinkedHashMap<>(baseUniqueValues.get());
+      updatedValues.putAll(data);
+      var checked = checkUniqueConditions(uniqueConditions, exclusionWhere, List.of(updatedValues));
+      if (checked.isFailure()) {
+        return Try.failure(checked.getCause());
       }
     }
 
     return DataModelPlugin.super.update(where, data, context);
   }
 
-  private List<String> duplicateFieldsForBatch(List<Map<String, Object>> candidateValues, RecordList records) {
-    return records.stream()
-        .flatMap(record -> candidateValues.stream()
-            .flatMap(data -> getDuplicateFieldLabels(data, record).stream()))
-        .distinct()
-        .collect(Collectors.toList());
+  private record UniqueCheck(UniquenessScope scope, Map<String, Object> condition) {
   }
 
-  private Map<String, Object> buildUniqueCheckConditions(Map<String, Object> data) {
-    var conditions = uniqueConstraints.stream()
-        .map(constraint -> buildConstraintCondition(constraint, data))
-        .filter(condition -> !condition.isEmpty())
-        .collect(Collectors.toList());
-    return combineOr(conditions);
+  private List<UniqueCheck> uniqueCheckConditions(Map<String, Object> data) {
+    return uniqueConstraints.stream()
+        .map(constraint -> new UniqueCheck(constraint.getScope(), buildConstraintCondition(constraint, data)))
+        .filter(check -> !check.condition().isEmpty())
+        .toList();
   }
 
-  private Try<Map<String, Object>> buildUpdateUniqueCheckConditions(
+  private Try<Void> checkUniqueConditions(List<UniqueCheck> conditions, Map<String, Object> exclusion,
+                                         List<Map<String, Object>> candidates) {
+    for (UniqueCheck check : conditions) {
+      DataModel checkDataModel = uniquenessCheckDataModel(check.scope());
+      Map<String, Object> where = combineAnd(exclusion, check.condition());
+      Try<Long> count = checkDataModel.count(where)
+          .onFailure(e -> logger.error(String.format("数据模型 %s 查询数据错误: ", dataModel.getFullName()), e));
+      if (count.isFailure()) {
+        return Try.failure(count.getCause());
+      }
+      if (count.get() == 0) {
+        continue;
+      }
+      if (notifyDuplicateFields) {
+        var records = checkDataModel.query(Map.of(Keyword.WHERE.toString(), where, Keyword.LIMIT.toString(), 1));
+        if (records.isFailure()) {
+          return Try.failure(records.getCause());
+        }
+        var labels = records.get().stream().flatMap(record -> candidates.stream()
+            .flatMap(candidate -> getDuplicateFieldLabels(candidate, record, check.scope()).stream()))
+            .distinct().toList();
+        if (!labels.isEmpty()) {
+          return Try.failure(new UniqueConstraintViolationException(
+              String.format("字段%s存在重复值，请检查!", String.join(",", labels)), labels));
+        }
+      }
+      return Try.failure(new UniqueConstraintViolationException("存在重复字段，请检查!"));
+    }
+    return Try.success(null);
+  }
+
+  private Try<List<UniqueCheck>> buildUpdateUniqueCheckConditions(
       List<DataModelUniqueConstraint> affectedConstraints,
       Map<String, Object> data,
       Map<String, Object> baseUniqueValues
   ) {
-    List<Map<String, Object>> conditions = new ArrayList<>();
+    List<UniqueCheck> conditions = new ArrayList<>();
     for (DataModelUniqueConstraint constraint : affectedConstraints) {
       Map<String, Object> values = new LinkedHashMap<>(baseUniqueValues);
       values.putAll(data);
-      Map<String, Object> condition = buildConstraintCondition(constraint, values);
-      if (condition.isEmpty()) {
+      if (buildConstraintValues(constraint, values).isEmpty()) {
         return Try.failure(new InvalidStatementException(
             String.format("数据模型 %s 更新指定了唯一约束字段但无法解析完整唯一约束值！", dataModel.getFullName())
         ));
       }
-      conditions.add(condition);
+      Map<String, Object> condition = buildConstraintCondition(constraint, values);
+      if (!condition.isEmpty()) {
+        conditions.add(new UniqueCheck(constraint.getScope(), condition));
+      }
     }
-    return Try.success(combineOr(conditions));
+    return Try.success(conditions);
   }
 
   private Try<Optional<Map<String, Object>>> buildBaseUniqueValues(
@@ -314,14 +234,12 @@ public class DuplicateDataCheckerDataModelPlugin implements DataModelPlugin {
           if (records.isEmpty()) {
             return Optional.empty();
           }
-          Map<String, Object> values = uniqueConstraintFields().stream()
-              .filter(records.get(0)::containsKey)
-              .collect(Collectors.toMap(
-                  Function.identity(),
-                  field -> records.get(0).get(field),
-                  (v1, v2) -> v2,
-                  LinkedHashMap::new
-              ));
+          Map<String, Object> values = new LinkedHashMap<>();
+          for (String field : uniqueConstraintFields()) {
+            if (records.get(0).containsKey(field)) {
+              values.put(field, records.get(0).get(field));
+            }
+          }
           return Optional.of(values);
         });
   }
@@ -337,11 +255,15 @@ public class DuplicateDataCheckerDataModelPlugin implements DataModelPlugin {
       }
       condition.put(field, toPersistentValue(field, data.get(field)));
     }
+    if (constraint.isNullsDistinct() && condition.containsValue(null)) {
+      return Collections.emptyMap();
+    }
     return condition;
   }
 
   private Optional<Map<String, Object>> completeUniqueIdentityWhere(Map<String, Object> uniqueFieldWhere) {
     return uniqueConstraints.stream()
+        .filter(constraint -> !buildConstraintCondition(constraint, uniqueFieldWhere).isEmpty())
         .map(constraint -> buildConstraintValues(constraint, uniqueFieldWhere))
         .filter(condition -> !condition.isEmpty())
         .findFirst();
@@ -381,13 +303,18 @@ public class DuplicateDataCheckerDataModelPlugin implements DataModelPlugin {
       return left;
     }
     if (Collections.disjoint(left.keySet(), right.keySet())) {
-      return Collections.singletonMap("and", DataMaps.merge(new LinkedHashMap<>(left), new LinkedHashMap<>(right)));
+      Map<String, Object> combined = new LinkedHashMap<>(left);
+      combined.putAll(right);
+      return Collections.singletonMap("and", combined);
     }
     return Collections.singletonMap("and", List.of(left, right));
   }
 
-  private DataModel uniquenessCheckDataModel() {
+  private DataModel uniquenessCheckDataModel(UniquenessScope scope) {
     var checkDataModel = dataModel.withoutPlugins();
+    if (scope == UniquenessScope.ALL_RECORDS) {
+      return checkDataModel;
+    }
     var pluginDescriptors = logicalDeletePluginDescriptors();
     if (pluginDescriptors.isEmpty()) {
       return checkDataModel;
@@ -402,8 +329,9 @@ public class DuplicateDataCheckerDataModelPlugin implements DataModelPlugin {
         .collect(Collectors.toList());
   }
 
-  private List<String> getDuplicateFieldLabels(Map<String, Object> data, Record record) {
+  private List<String> getDuplicateFieldLabels(Map<String, Object> data, Record record, UniquenessScope scope) {
     return uniqueConstraints.stream()
+        .filter(constraint -> constraint.getScope() == scope)
         .filter(constraint -> isDuplicateConstraintValue(constraint, data, record))
         .flatMap(constraint -> constraint.getFields().stream())
         .map(this::fieldLabel)
@@ -415,9 +343,9 @@ public class DuplicateDataCheckerDataModelPlugin implements DataModelPlugin {
       Map<String, Object> data,
       Record record
   ) {
-    return constraint.getFields().stream()
-        .allMatch(field -> data.containsKey(field)
-            && Objects.equals(toPersistentValue(field, data.get(field)), toPersistentValue(field, record.get(field))));
+    Map<String, Object> condition = buildConstraintCondition(constraint, data);
+    return !condition.isEmpty() && constraint.getFields().stream()
+        .allMatch(field -> Objects.equals(condition.get(field), toPersistentValue(field, record.get(field))));
   }
 
   private List<String> getBatchDuplicateFieldLabels(List<Map<String, Object>> dataList) {

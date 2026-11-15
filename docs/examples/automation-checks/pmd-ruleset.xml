@@ -55,7 +55,7 @@
             //ThrowStatement/Expression/PrimaryExpression/PrimaryPrefix/AllocationExpression/ClassOrInterfaceType[
               (@Image='RuntimeException' or @Image='Exception') and
               not(ancestor::CompilationUnit/PackageDeclaration/Name[
-                starts-with(@Image, 'com.ouroboros.data.util')
+                starts-with(@Image, 'com.ouroboros.util')
               ])
             ]
           ]]>

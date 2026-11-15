@@ -9,8 +9,10 @@ import io.vavr.Tuple;
 import io.vavr.Tuple3;
 
 /**
- * WIP: Where 链式构造器
+ * @deprecated 使用 {@link com.ouroboros.data.dsl.query.Query#field(String, String...)} 和
+ * {@link com.ouroboros.data.dsl.query.Query#and(com.ouroboros.data.dsl.query.QueryCondition...)} 组合条件。
  */
+@Deprecated
 public class WhereBuilder {
   private final List<Map<String, Object>> conditions = new ArrayList<>();
   private String logicalOperator = "AND";
@@ -43,6 +45,8 @@ public class WhereBuilder {
     return new SingletonMap<>(this.logicalOperator, conditions);
   }
 
+  /** @deprecated 使用 {@link com.ouroboros.data.dsl.query.QueryCondition}。 */
+  @Deprecated
   public class ConditionsGroup {
     private final List<Tuple3<String, String, Object>> conditions = new ArrayList<>();
     private String logicOperator;

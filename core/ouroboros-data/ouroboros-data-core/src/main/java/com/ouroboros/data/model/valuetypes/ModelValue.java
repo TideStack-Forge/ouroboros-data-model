@@ -216,7 +216,19 @@ public class ModelValue extends RelatedValue<Object> implements ValueTypeBuilder
       if (refKey == null) {
         logger.warn("Cannot get reference key of field {}", this.dataModelField.getName());
       }
-      return map.get(refKey);
+      return blankToNull(map.get(refKey));
+    }
+    return blankToNull(value);
+  }
+
+  /**
+   * 关联字段的"清空"从前端回传的是空串（amis Select 的 resetValue），而关联列是 bigint。
+   * 空串原样落到 SQL 会报 {@code Incorrect integer value: ''}；这里与 SnowflakeIdValue、
+   * IntegerValue 等标量值类型保持一致，把空白字符串归一成 null（即置空引用）。
+   */
+  private static Object blankToNull(Object value) {
+    if (value instanceof CharSequence text && text.toString().trim().isEmpty()) {
+      return null;
     }
     return value;
   }

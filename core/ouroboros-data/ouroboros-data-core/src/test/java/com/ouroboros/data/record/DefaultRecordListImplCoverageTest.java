@@ -87,8 +87,31 @@ class DefaultRecordListImplCoverageTest {
     assertEquals(1, beanViews.size());
     assertEquals(Integer.valueOf(3), beanViews.get(0).getId());
 
-    var unsupported = list.toBeanList(Void.class);
-    assertEquals(1, unsupported.size());
-    assertNull(unsupported.get(0));
+    assertThrows(IllegalStateException.class, () -> list.toBeanList(Void.class));
+  }
+
+  @Test
+  void nonEmptyRecordCannotConvertToNullBean() {
+    var row = new LinkedHashMap<String, Object>();
+    row.put("id", 5);
+
+    var record = Record.of(row);
+
+    assertThrows(IllegalStateException.class, () -> record.toBean(Void.class));
+  }
+
+  @Test
+  void recordListSkipsNullRowsWhenConvertingToBeans() {
+    var row = new LinkedHashMap<String, Object>();
+    row.put("id", 4);
+
+    var list = RecordList.of(Arrays.asList(null, row));
+
+    assertNull(list.get(0));
+
+    var beanViews = list.toBeanList(BeanView.class);
+
+    assertEquals(1, beanViews.size());
+    assertEquals(Integer.valueOf(4), beanViews.get(0).getId());
   }
 }

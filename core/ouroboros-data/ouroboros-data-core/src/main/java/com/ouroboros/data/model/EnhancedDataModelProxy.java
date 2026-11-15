@@ -27,6 +27,7 @@ import com.ouroboros.data.dsl.statement.OmitClause;
 import com.ouroboros.data.dsl.statement.PopulateClause;
 import com.ouroboros.data.dsl.statement.QueryStatement;
 import com.ouroboros.data.exception.InvalidStatementException;
+import com.ouroboros.data.exception.DataModelException;
 import com.ouroboros.data.exception.StatementException;
 import com.ouroboros.data.normalize.QueryNormalizeContext;
 import com.ouroboros.data.normalize.normalizers.PopulateOmitNormalizer;
@@ -255,44 +256,207 @@ public class EnhancedDataModelProxy implements DataModel {
 
   @Override
   public Try<Record> insert(Map<String, Object> data) {
-    return plugins.isEmpty()
+    Try<Void> participation = Try.run(() -> DataModelExecutionContext.beforeWrite(this));
+    if (participation.isFailure()) {
+      return Try.failure(participation.getCause());
+    }
+    if (DataModelExecutionContext.isReadOnly()) {
+      return readOnlyWriteFailure();
+    }
+    Try<Record> result = plugins.isEmpty()
         ? coreDataModel.insert(data)
         : plugins.get(0).insert(data, pluginContext(1));
+    result.onSuccess(record -> DataModelExecutionContext.recordMutation(
+        getFullName(), "INSERT", primaryKeyValues(record), record == null ? 0 : 1));
+    return result;
   }
 
   @Override
   public Try<RecordList> batchInsert(List<Map<String, Object>> dataList) {
-    return plugins.isEmpty()
+    Try<Void> participation = Try.run(() -> DataModelExecutionContext.beforeWrite(this));
+    if (participation.isFailure()) {
+      return Try.failure(participation.getCause());
+    }
+    if (DataModelExecutionContext.isReadOnly()) {
+      return readOnlyWriteFailure();
+    }
+    Try<RecordList> result = plugins.isEmpty()
         ? coreDataModel.batchInsert(dataList)
         : plugins.get(0).batchInsert(dataList, pluginContext(1));
+    result.onSuccess(records -> DataModelExecutionContext.recordMutation(
+        getFullName(), "INSERT", primaryKeyValues(records), records == null ? 0 : records.size()));
+    return result;
   }
 
   @Override
   public Try<Long> update(Map<String, Object> where, Map<String, Object> data) {
     return typedQueryNormalizeContext.forClause("WHERE")
         .normalizeCondition(where, "root")
-        .flatMap(condition -> update(condition, data));
+        .flatMap(condition -> executeUpdate(condition, data));
   }
 
   @Override
   public Try<Long> update(SExpression<Boolean> where, Map<String, Object> data) {
-    return plugins.isEmpty()
-        ? coreDataModel.update(where, data)
+    return executeUpdate(where, data);
+  }
+
+  private Try<Long> executeUpdate(SExpression<Boolean> where, Map<String, Object> data) {
+    Try<Void> participation = Try.run(() -> DataModelExecutionContext.beforeWrite(this));
+    if (participation.isFailure()) {
+      return Try.failure(participation.getCause());
+    }
+    if (DataModelExecutionContext.isReadOnly()) {
+      return readOnlyWriteFailure();
+    }
+    return DataModelExecutionContext.withMutationOperation("UPDATE", () -> {
+      if (!DataModelExecutionContext.isMutationTrackingEnabled()) {
+        return dispatchUpdate(where, data);
+      }
+      return queryMutationTargets(where)
+          .flatMap(ignored -> dispatchUpdate(where, data));
+    });
+  }
+
+  private Try<Long> dispatchUpdate(SExpression<Boolean> where, Map<String, Object> data) {
+    Try<Long> result = plugins.isEmpty()
+        ? executeTrackedUpdate(where, data)
         : plugins.get(0).update(where, data, pluginContext(1));
+    return DataModelExecutionContext.isMutationTrackingEnabled()
+        ? result.onFailure(DataModelExecutionContext::recordMutationFailure)
+        : result;
+  }
+
+  private Try<Long> executeTrackedUpdate(SExpression<Boolean> where, Map<String, Object> data) {
+    if (!DataModelExecutionContext.isMutationTrackingEnabled()) {
+      return coreDataModel.update(where, data);
+    }
+    return queryMutationTargets(where).flatMap(records -> {
+      Try<List<Object>> ids = extractMutationTargetIds(records);
+      if (ids.isFailure()) {
+        return failMutationTracking(ids.getCause());
+      }
+      if (ids.get().isEmpty()) {
+        return Try.success(0L);
+      }
+      return buildMutationTargetCondition(ids.get())
+          .flatMap(targets -> coreDataModel.update(targets, data))
+          .flatMap(affectedRows -> validateAndRecordMutation("UPDATE", ids.get(), affectedRows));
+    });
   }
 
   @Override
   public Try<Long> delete(Map<String, Object> where) {
     return typedQueryNormalizeContext.forClause("WHERE")
         .normalizeCondition(where, "root")
-        .flatMap(this::delete);
+        .flatMap(this::executeDelete);
   }
 
   @Override
   public Try<Long> delete(SExpression<Boolean> where) {
-    return plugins.isEmpty()
-        ? coreDataModel.delete(where)
+    return executeDelete(where);
+  }
+
+  private Try<Long> executeDelete(SExpression<Boolean> where) {
+    Try<Void> participation = Try.run(() -> DataModelExecutionContext.beforeWrite(this));
+    if (participation.isFailure()) {
+      return Try.failure(participation.getCause());
+    }
+    if (DataModelExecutionContext.isReadOnly()) {
+      return readOnlyWriteFailure();
+    }
+    return DataModelExecutionContext.withMutationOperation("DELETE", () -> {
+      if (!DataModelExecutionContext.isMutationTrackingEnabled()) {
+        return dispatchDelete(where);
+      }
+      return queryMutationTargets(where)
+          .flatMap(ignored -> dispatchDelete(where));
+    });
+  }
+
+  private Try<Long> dispatchDelete(SExpression<Boolean> where) {
+    Try<Long> result = plugins.isEmpty()
+        ? executeTrackedDelete(where)
         : plugins.get(0).delete(where, pluginContext(1));
+    return DataModelExecutionContext.isMutationTrackingEnabled()
+        ? result.onFailure(DataModelExecutionContext::recordMutationFailure)
+        : result;
+  }
+
+  private Try<Long> executeTrackedDelete(SExpression<Boolean> where) {
+    if (!DataModelExecutionContext.isMutationTrackingEnabled()) {
+      return coreDataModel.delete(where);
+    }
+    return queryMutationTargets(where).flatMap(records -> {
+      Try<List<Object>> ids = extractMutationTargetIds(records);
+      if (ids.isFailure()) {
+        return failMutationTracking(ids.getCause());
+      }
+      if (ids.get().isEmpty()) {
+        return Try.success(0L);
+      }
+      return buildMutationTargetCondition(ids.get())
+          .flatMap(coreDataModel::delete)
+          .flatMap(affectedRows -> validateAndRecordMutation("DELETE", ids.get(), affectedRows));
+    });
+  }
+
+  private Try<RecordList> queryMutationTargets(SExpression<Boolean> where) {
+    List<DataModelField> primaryKeys = getPrimaryKeys();
+    if (primaryKeys.size() != 1) {
+      return failMutationTracking(new InvalidStatementException(
+          "Action 写入审计要求数据模型具有唯一主键"));
+    }
+    QueryStatement statement = QueryStatement.builder()
+        .select(SExpression.field(primaryKeys.get(0).getName()))
+        .from(getFullName(), getRawName())
+        .where(where)
+        .build();
+    return queryForUpdate(statement)
+        .onFailure(DataModelExecutionContext::recordMutationFailure);
+  }
+
+  private Try<List<Object>> extractMutationTargetIds(RecordList records) {
+    String primaryKeyName = getPrimaryKeys().get(0).getName();
+    List<Object> ids = new ArrayList<>(records.size());
+    java.util.Set<Object> uniqueIds = new java.util.LinkedHashSet<>();
+    for (Record record : records) {
+      Object id = record.get(primaryKeyName);
+      if (id == null || !uniqueIds.add(id)) {
+        return Try.failure(new InvalidStatementException(
+            "事务锁定查询未能返回唯一且非空的主键"));
+      }
+      ids.add(id);
+    }
+    return Try.success(ids);
+  }
+
+  private Try<SExpression<Boolean>> buildMutationTargetCondition(List<Object> ids) {
+    return DataModelPredicateBuilder.buildIdsPredicate(coreDataModel, ids)
+        .flatMap(condition -> typedQueryNormalizeContext.forClause("WHERE")
+            .normalizeCondition(condition, "root"));
+  }
+
+  private Try<Long> validateAndRecordMutation(String operation, List<Object> ids, Long affectedRows) {
+    if (affectedRows == null) {
+      return failMutationTracking(new DataModelException("数据模型写入未返回受影响行数"));
+    }
+    // Drivers reporting changed rows return zero for a successful same-value UPDATE.
+    if ("UPDATE".equals(operation) && affectedRows == 0L) {
+      return Try.success(0L);
+    }
+    if (affectedRows != ids.size()) {
+      return failMutationTracking(new DataModelException(
+          "数据模型写入行数与事务锁定的对象数量不一致，Action 必须回滚"));
+    }
+    DataModelExecutionContext.recordMutation(
+        getFullName(), DataModelExecutionContext.getMutationOperation(operation),
+        ids.stream().map(String::valueOf).toList(), affectedRows);
+    return Try.success(affectedRows);
+  }
+
+  private <T> Try<T> failMutationTracking(Throwable failure) {
+    DataModelExecutionContext.recordMutationFailure(failure);
+    return Try.failure(failure);
   }
 
   @Override
@@ -302,6 +466,10 @@ public class EnhancedDataModelProxy implements DataModel {
     queryMap.put(Keyword.WHERE.toString(), where);
     return typedQueryNormalizeContext.normalizeQuery(queryMap)
         .flatMap(this::count);
+  }
+
+  private <T> Try<T> readOnlyWriteFailure() {
+    return Try.failure(new DataModelException("当前 Action 为只读，禁止修改数据模型 " + getFullName()));
   }
 
   @Override
@@ -336,6 +504,16 @@ public class EnhancedDataModelProxy implements DataModel {
             () -> plugins.isEmpty()
                 ? coreDataModel.query(statement)
                 : plugins.get(0).query(statement, pluginContext(1))));
+  }
+
+  @Override
+  public Try<RecordList> queryForUpdate(QueryStatement statement) {
+    return Try.of(() -> new TypedQueryProvenance(statement.getFrom(), statement))
+        .flatMap(provenance -> queryWithinInvocation(
+            provenance,
+            () -> plugins.isEmpty()
+                ? coreDataModel.queryForUpdate(statement)
+                : plugins.get(0).queryForUpdate(statement, pluginContext(1))));
   }
 
   private <T> Try<T> queryWithinInvocation(
@@ -450,7 +628,9 @@ public class EnhancedDataModelProxy implements DataModel {
       return Try.failure(cause);
     }
 
-    return update(whereResult.get(), data);
+    return typedQueryNormalizeContext.forClause("WHERE")
+        .normalizeCondition(whereResult.get(), "root")
+        .flatMap(condition -> executeUpdate(condition, data));
   }
 
   @Override
@@ -465,7 +645,9 @@ public class EnhancedDataModelProxy implements DataModel {
       return Try.failure(cause);
     }
 
-    return update(whereResult.get(), data);
+    return typedQueryNormalizeContext.forClause("WHERE")
+        .normalizeCondition(whereResult.get(), "root")
+        .flatMap(condition -> executeUpdate(condition, data));
   }
 
   @Override
@@ -554,13 +736,37 @@ public class EnhancedDataModelProxy implements DataModel {
   @Override
   public Try<Long> delete(Object id) {
     return DataModelPredicateBuilder.buildIdPredicate(this, id)
-        .flatMap(this::delete);
+        .flatMap(where -> typedQueryNormalizeContext.forClause("WHERE")
+            .normalizeCondition(where, "root")
+            .flatMap(this::executeDelete));
   }
 
   @Override
   public Try<Long> delete(List<?> ids) {
     return DataModelPredicateBuilder.buildIdsPredicate(this, ids)
-        .flatMap(this::delete);
+        .flatMap(where -> typedQueryNormalizeContext.forClause("WHERE")
+            .normalizeCondition(where, "root")
+            .flatMap(this::executeDelete));
+  }
+
+  private List<String> primaryKeyValues(Record record) {
+    if (record == null || getPrimaryKeys().size() != 1) {
+      return List.of();
+    }
+    Object value = record.get(getPrimaryKeys().get(0).getName());
+    return value == null ? List.of() : List.of(String.valueOf(value));
+  }
+
+  private List<String> primaryKeyValues(RecordList records) {
+    if (records == null || getPrimaryKeys().size() != 1) {
+      return List.of();
+    }
+    String primaryKeyName = getPrimaryKeys().get(0).getName();
+    return records.stream()
+        .map(record -> record.get(primaryKeyName))
+        .filter(Objects::nonNull)
+        .map(String::valueOf)
+        .toList();
   }
 
   // ================== 插件管理方法 ==================
@@ -620,6 +826,15 @@ public class EnhancedDataModelProxy implements DataModel {
    */
   private class TailPlugin implements DataModelPlugin {
     @Override
+    public Try<RecordList> queryForUpdate(QueryStatement statement, DataModelPluginContext context) {
+      var validation = validatePluginQueryStatement(statement);
+      if (validation.isFailure()) {
+        return Try.failure(validation.getCause());
+      }
+      return coreDataModel.queryForUpdate(statement);
+    }
+
+    @Override
     public Try<Record> insert(Map<String, Object> data, DataModelPluginContext context) {
       return coreDataModel.insert(data);
     }
@@ -631,12 +846,12 @@ public class EnhancedDataModelProxy implements DataModel {
 
     @Override
     public Try<Long> update(SExpression<Boolean> where, Map<String, Object> data, DataModelPluginContext context) {
-      return coreDataModel.update(where, data);
+      return executeTrackedUpdate(where, data);
     }
 
     @Override
     public Try<Long> delete(SExpression<Boolean> where, DataModelPluginContext context) {
-      return coreDataModel.delete(where);
+      return executeTrackedDelete(where);
     }
 
     @Override
