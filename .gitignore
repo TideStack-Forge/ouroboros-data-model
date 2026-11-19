@@ -133,7 +133,6 @@ tmp/
 /.docker/
 
 ### Open-source preparation: local inputs and generated records ###
-/.codestable/
 .env
 .env.*
 !.env.example

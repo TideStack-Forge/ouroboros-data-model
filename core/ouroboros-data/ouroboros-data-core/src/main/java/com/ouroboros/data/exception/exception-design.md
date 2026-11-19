@@ -125,4 +125,4 @@ DataModelException (RuntimeException)
 
 继承关系以本包源类型为准；其中 `FieldValidationException` 直接继承 `DataModelException`，不能仅捕获 `DataValidationException` 就假定覆盖全部字段错误。旧 `ValidationException` 仍继承 `RecordValidationException`，是否继续迁移应按实际调用点安排。
 
-原阶段性迁移清单不代表当前完成状态，已退出本页；历史可从本文件 Git 记录追溯。本页只维护当前异常合同。内核异常在平台 API 边界的映射见 exception-mapper（平台适配器，不包含在此公开投影中）。
+原阶段性迁移清单不代表当前完成状态，已退出本页；历史可从本文件 Git 记录追溯。本页只维护当前异常合同。内核异常在平台 API 边界的映射见 [exception-mapper](../../../../../../../../../../libs/common/common-exception-mapper/README.md)。

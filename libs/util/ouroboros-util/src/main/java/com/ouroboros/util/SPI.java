@@ -2,10 +2,10 @@ package com.ouroboros.util;
 
 import java.util.Comparator;
 import java.util.List;
+import java.util.ServiceConfigurationError;
 import java.util.ServiceLoader;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.ConcurrentSkipListMap;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
@@ -16,7 +16,49 @@ import jakarta.annotation.Priority;
  */
 @SuppressWarnings("unused")
 public final class SPI {
-  static ConcurrentMap<String, List<?>> cachedSpiInstanceMap = new ConcurrentSkipListMap<>();
+  private static final ConcurrentMap<ServiceKey, CachedServices> cachedSpiInstances = new ConcurrentHashMap<>();
+
+  private record ServiceKey(Class<?> serviceClass, ClassLoader classLoader) {
+  }
+
+  private static final class CachedServices {
+    private final Object initializationLock = new Object();
+    private volatile List<?> instances;
+    private boolean initializing;
+
+    private List<?> get(Class<?> serviceClass) {
+      var list = instances;
+      if (list == null) {
+        synchronized (initializationLock) {
+          list = instances;
+          if (list == null) {
+            if (initializing) {
+              throw new ServiceConfigurationError("Circular SPI provider initialization: " + serviceClass.getName());
+            }
+            initializing = true;
+            try {
+              list = getSortedServiceStream(serviceClass).toList();
+              instances = list;
+            } finally {
+              initializing = false;
+            }
+          }
+        }
+      }
+      return list;
+    }
+  }
+
+  /** 清理当前进程的提供者清单，下一次查询重新发现。 */
+  public static void clearCache() {
+    cachedSpiInstances.clear();
+  }
+
+  /** 加载器所有者须在释放加载器前清理其提供者，避免缓存继续持有实现。 */
+  public static void clearCache(ClassLoader classLoader) {
+    cachedSpiInstances.keySet().removeIf(key ->
+        key.classLoader() == classLoader || key.serviceClass().getClassLoader() == classLoader);
+  }
 
   private SPI() {
   }
@@ -188,11 +230,16 @@ public final class SPI {
    * @param serviceClass 实例类型
    * @return serviceClass 的 Stream
    */
-  @SuppressWarnings("unchecked")
   public static <T> Stream<T> getCachedServiceStream(Class<T> serviceClass) {
-    var list = cachedSpiInstanceMap
-        .computeIfAbsent(serviceClass.getName(), k -> getSortedServiceStream(serviceClass).collect(Collectors.toList()));
-    return (Stream<T>) list.stream();
+    var key = new ServiceKey(serviceClass, Thread.currentThread().getContextClassLoader());
+    var services = cachedSpiInstances.get(key);
+    if (services == null) {
+      var candidate = new CachedServices();
+      var existing = cachedSpiInstances.putIfAbsent(key, candidate);
+      services = existing == null ? candidate : existing;
+    }
+    // Construct providers after registration; nested discovery must not run inside a map computation.
+    return services.get(serviceClass).stream().map(serviceClass::cast);
   }
 
   /**

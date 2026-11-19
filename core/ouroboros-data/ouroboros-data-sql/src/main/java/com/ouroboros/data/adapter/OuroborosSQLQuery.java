@@ -1,6 +1,5 @@
 package com.ouroboros.data.adapter;
 
-import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -8,22 +7,25 @@ import java.util.Map;
 import com.ouroboros.data.transpile.OuroborosQueryMetadata;
 import com.ouroboros.data.transpile.DefaultOuroborosQueryMetadata;
 import com.querydsl.core.JoinExpression;
+import com.querydsl.core.DefaultQueryMetadata;
+import com.querydsl.core.JoinType;
+import com.querydsl.core.types.OrderSpecifier;
 import com.querydsl.core.QueryFlag;
 import com.querydsl.core.QueryMetadata;
 import com.querydsl.core.types.Expression;
+import com.querydsl.core.types.ExpressionUtils;
+import com.querydsl.core.types.dsl.Wildcard;
 import com.querydsl.core.types.ParamExpression;
 import com.querydsl.core.types.SubQueryExpression;
 import com.querydsl.core.types.dsl.Expressions;
 import com.querydsl.sql.SQLOps;
 import com.querydsl.sql.SQLQuery;
+import com.querydsl.sql.SQLSerializer;
 import com.querydsl.sql.SQLTemplates;
 
 public class OuroborosSQLQuery extends SQLQuery<Object> {
-  private static final Field UNION_FIELD = getAccessibleField("union");
-  private static final Field FIRST_UNION_SUBQUERY_FIELD = getAccessibleField("firstUnionSubQuery");
-  private static final Field UNION_ALL_FIELD = getAccessibleField("unionAll");
 
-  private SQLTemplates templates;
+  private final SQLTemplates templates;
 
   public OuroborosSQLQuery(SQLTemplates templates, QueryMetadata metadata) {
     super(null, templates, metadata);
@@ -33,12 +35,13 @@ public class OuroborosSQLQuery extends SQLQuery<Object> {
 
   public OuroborosSQLQuery(SQLTemplates templates) {
     super(templates);
+    this.templates = templates;
   }
 
   private void preprocessMetadata(QueryMetadata metadata) {
     if (metadata instanceof OuroborosQueryMetadata ouroborosMetadata) {
-      preprocessWith(ouroborosMetadata);
       preprocessUnionMetadata(ouroborosMetadata);
+      preprocessWith(ouroborosMetadata);
     }
   }
 
@@ -157,22 +160,45 @@ public class OuroborosSQLQuery extends SQLQuery<Object> {
   }
 
   private void setUnionState(Expression<?> unionExpression, SubQueryExpression<?> firstSubQuery) {
-    try {
-      UNION_FIELD.set(this, unionExpression);
-      FIRST_UNION_SUBQUERY_FIELD.set(this, firstSubQuery);
-      UNION_ALL_FIELD.setBoolean(this, false);
-    } catch (IllegalAccessException e) {
-      throw new IllegalStateException("无法设置 QueryDSL UNION 状态", e);
-    }
+    this.union = unionExpression;
+    this.firstUnionSubQuery = firstSubQuery;
+    this.unionAll = false;
   }
 
-  private static Field getAccessibleField(String fieldName) {
-    try {
-      Field field = com.querydsl.sql.ProjectableSQLQuery.class.getDeclaredField(fieldName);
-      field.setAccessible(true);
-      return field;
-    } catch (ReflectiveOperationException e) {
-      throw new IllegalStateException("无法访问 QueryDSL 字段: " + fieldName, e);
+  @Override
+  protected SQLSerializer serialize(boolean forCountRow) {
+    if (union == null || !getMetadata().getModifiers().isRestricting()) {
+      return super.serialize(forCountRow);
     }
+
+    // QueryDSL's union serializer omits modifiers. A derived table lets the
+    // dialect's normal query serializer own pagination, including Oracle/SQL Server.
+    var innerMetadata = createMainUnionSubQueryMetadata(getMetadata());
+    for (var flag : List.copyOf(innerMetadata.getFlags())) {
+      innerMetadata.removeFlag(flag);
+    }
+    var inner = new OuroborosSQLQuery(templates, innerMetadata);
+    inner.setUnionState(union, firstUnionSubQuery);
+
+    var outer = new DefaultQueryMetadata();
+    outer.setProjection(Wildcard.all);
+    outer.addJoin(JoinType.DEFAULT, ExpressionUtils.as(inner, Expressions.path(Object.class, "union_result")));
+    outer.setModifiers(getMetadata().getModifiers());
+    getMetadata().getOrderBy().forEach(outer::addOrderBy);
+    getMetadata().getFlags().forEach(outer::addFlag);
+
+    var serializer = new SQLSerializer(configuration) {
+      @Override
+      protected void handleOrderBy(List<OrderSpecifier<?>> orderBy) {
+        // UNION order expressions refer to output columns, as in serializeUnion.
+        boolean previous = skipParent;
+        skipParent = true;
+        super.handleOrderBy(orderBy);
+        skipParent = previous;
+      }
+    };
+    serializer.setUseLiterals(useLiterals);
+    serializer.serialize(outer, forCountRow);
+    return serializer;
   }
 }

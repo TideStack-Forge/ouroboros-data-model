@@ -15,6 +15,16 @@
 
     <dependencies>
         <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-core</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.ouroboros</groupId>
+            <artifactId>common-service</artifactId>
+        </dependency>
+
+        <dependency>
             <groupId>com.ouroboros</groupId>
             <artifactId>ouroboros-data-core</artifactId>
         </dependency>

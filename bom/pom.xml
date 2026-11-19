@@ -17,6 +17,7 @@
         <maven.compiler.target>21</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
+        <aws-sdk.version>2.57.3</aws-sdk.version>
         <!-- Spring Boot BOM 版本 -->
         <spring-boot.version>3.5.11</spring-boot.version>
         <spring-cloud.version>2025.0.3</spring-cloud.version>
@@ -39,6 +40,7 @@
 
     <dependencyManagement>
         <dependencies>
+            <dependency><groupId>software.amazon.awssdk</groupId><artifactId>bom</artifactId><version>${aws-sdk.version}</version><type>pom</type><scope>import</scope></dependency>
             <!-- Align Spring Authorization Server and Spring Security JOSE transitive versions. -->
             <dependency>
                 <groupId>com.nimbusds</groupId>
@@ -319,6 +321,27 @@
             </dependency>
 
             <!-- 公共包 -->
+            <dependency>
+                <groupId>com.ouroboros</groupId>
+                <artifactId>common-error-code</artifactId>
+                <version>${ouroboros.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.ouroboros</groupId>
+                <artifactId>common-exception</artifactId>
+                <version>${ouroboros.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.ouroboros</groupId>
+                <artifactId>common-exception-mapper</artifactId>
+                <version>${ouroboros.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.ouroboros</groupId>
+                <artifactId>common-service</artifactId>
+                <version>${ouroboros.version}</version>
+            </dependency>
 
             <!-- Redisson -->
             <dependency>

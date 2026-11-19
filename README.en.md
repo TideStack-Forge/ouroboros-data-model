@@ -5,8 +5,8 @@ model. It is generated from the internal monorepo by the manifest-scoped export
 workflow and contains synthetic Git history only.
 
 - Export manifest: `internal export manifest (not copied)`
-- Manifest SHA-256: `93ce24bc900d448bdc5ee19f29e4f1129956ccd1df5a59e086723c02231071e6`
-- Mode: `dry-run`
+- Manifest SHA-256: `9fead700a6ef02be30400c1de1154441bce17378d7d2a2d705a871be8c46fe20`
+- Mode: `sync`
 - License: Apache License 2.0; see `LICENSE`.
 - Non-automatic actions: no remote push, merge, publish, release, deploy, or promotion.
 

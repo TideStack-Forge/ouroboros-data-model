@@ -15,6 +15,7 @@
 
     <modules>
         <module>util/ouroboros-util</module>
+        <module>common</module>
     </modules>
 
 </project>

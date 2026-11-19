@@ -2,6 +2,7 @@ package com.ouroboros.util;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 
 import java.util.List;
@@ -39,7 +40,7 @@ public class SPICoverageTest {
 
   @Test
   public void loadsAndCachesConfiguredServices() {
-    SPI.cachedSpiInstanceMap.clear();
+    SPI.clearCache();
 
     var loaded = SPI.getServiceStream(ObjectMapperConfigurator.class).collect(java.util.stream.Collectors.toList());
     assertFalse(loaded.isEmpty());
@@ -51,14 +52,15 @@ public class SPICoverageTest {
     assertEquals(SPI.getCachedServiceStream(ObjectMapperConfigurator.class).findFirst().get().getClass(), SPI.getCachedReversedServiceStream(ObjectMapperConfigurator.class).findFirst().get().getClass());
     assertEquals(SPI.getPrimaryService(ObjectMapperConfigurator.class).getClass(), SPI.getReversedServiceStream(ObjectMapperConfigurator.class).findFirst().get().getClass());
     assertEquals(SPI.getCachedPrimaryService(ObjectMapperConfigurator.class).getClass(), SPI.getCachedReversedServiceStream(ObjectMapperConfigurator.class).findFirst().get().getClass());
-    assertTrue(SPI.cachedSpiInstanceMap.containsKey(ObjectMapperConfigurator.class.getName()));
+    assertSame(SPI.getCachedPrimaryService(ObjectMapperConfigurator.class),
+        SPI.getCachedPrimaryService(ObjectMapperConfigurator.class));
 
     assertEquals(1, MapSerializer.getAllFromSPI().size());
     assertEquals(1, MapDeserializer.getAllFromSPI().size());
   }
   @Test
   public void filtersAndCachesGenericServices() {
-    SPI.cachedSpiInstanceMap.clear();
+    SPI.clearCache();
     assertEquals(1, SPI.getCachedServiceStream(TestGenericService1.class, String.class).count());
     assertEquals(1, SPI.getCachedSortedServiceStream(TestGenericService1.class, String.class).count());
     assertEquals(1, SPI.getCachedReversedServiceStream(TestGenericService1.class, String.class).count());

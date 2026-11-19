@@ -1,19 +1,19 @@
 schema_version: 1
 roadmap: dynamic-data-model-open-source
-mode: dry-run
+mode: sync
 status: passed
-generated_at: "2026-11-15T08:36:21.736029+00:00"
+generated_at: "2026-11-19T11:22:42.389348+00:00"
 manifest: internal-export-manifest
-manifest_sha256: 93ce24bc900d448bdc5ee19f29e4f1129956ccd1df5a59e086723c02231071e6
+manifest_sha256: 9fead700a6ef02be30400c1de1154441bce17378d7d2a2d705a871be8c46fe20
 target: public-tree-local-fixture
 source_ref_recorded_in_public_tree: false
 public_ref_recorded_in_public_tree: false
 sync:
   policy: manifest-scoped-forward-sync
-  dry_run: false
+  dry_run: true
   history_policy: orphan-from-first-public-release
   internal_commit_messages_copied: false
-  projection_commit_message: "Initial public data model dry-run export"
+  projection_commit_message: "Sync public data model projection"
   remote_actions_performed: false
 included_modules:
   - data-core
