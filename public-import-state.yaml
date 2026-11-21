@@ -1,12 +1,12 @@
 schema_version: 1
 roadmap: dynamic-data-model-open-source
 status: passed
-generated_at: "2026-11-19T11:23:08.814671+00:00"
+generated_at: "2026-11-21T13:07:00.707693+00:00"
 public_repo: public-tree-local-fixture
 public_pr: fixture
 target_branch: import-branch-dry-run
 manifest: internal-export-manifest
-manifest_sha256: 9fead700a6ef02be30400c1de1154441bce17378d7d2a2d705a871be8c46fe20
+manifest_sha256: e9dea1db9d21822518b024a449de22023baf3be9825fa2df55fc3ff5295a18df
 public_ref_recorded_in_public_tree: false
 dry_run: true
 direct_merge_to_main: false

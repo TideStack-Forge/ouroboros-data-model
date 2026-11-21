@@ -19,12 +19,15 @@ import com.ouroboros.util.config.ObjectMapperConfigurator;
 @SuppressWarnings("unused")
 public class Json {
   static final ObjectMapper objectMapper = new ObjectMapper();
+  static final ObjectMapper strictObjectMapper;
   static final DefaultPrettyPrinter prettyPrinter = new DefaultPrettyPrinter();
 
   static {
     objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
     SPI.getSortedServiceStream(ObjectMapperConfigurator.class)
         .forEach(configure -> configure.accept(objectMapper));
+    strictObjectMapper = objectMapper.copy();
+    strictObjectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, true);
 
     DefaultPrettyPrinter.Indenter indenter = new DefaultIndenter("  ", DefaultIndenter.SYS_LF);
     prettyPrinter.indentObjectsWith(indenter);
@@ -156,6 +159,13 @@ public class Json {
   }
 
   /**
+   * 将 Json 字符串转换为指定类型的对象，并拒绝未知字段。
+   */
+  public static <T> Try<T> tryToStrictBean(Class<T> clazz, CharSequence jsonString) {
+    return Try.of(() -> strictObjectMapper.readValue(jsonString.toString(), clazz));
+  }
+
+  /**
    * 将 Json 字符串转换为指定类型的对象
    *
    * @param typeReference
@@ -174,6 +184,16 @@ public class Json {
    */
   public static <T> Try<T> tryToBean(TypeReference<T> typeReference, CharSequence jsonString) {
     return Try.of(() -> objectMapper.readValue(jsonString.toString(), typeReference));
+  }
+
+  /**
+   * 将 Json 字符串转换为指定类型的对象，并拒绝未知字段。
+   *
+   * @param typeReference
+   * @param jsonString
+   */
+  public static <T> Try<T> tryToStrictBean(TypeReference<T> typeReference, CharSequence jsonString) {
+    return Try.of(() -> strictObjectMapper.readValue(jsonString.toString(), typeReference));
   }
 
   /**

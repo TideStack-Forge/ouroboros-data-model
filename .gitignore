@@ -90,6 +90,12 @@ ide-plugins/vscode-plugin/package.nls*.json
 
 
 ### AI 助手 ###
+/work/
+/docs/exec-plans/
+/docs/reports/
+/docs/reviews/
+/docs/research/
+/docs/archive/
 **/.claude/settings.local.json
 .aider*
 *.claude.txt

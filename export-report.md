@@ -3,12 +3,12 @@
 ## Summary
 
 - Status: passed
-- Generated at: `2026-11-19T11:22:42.389348+00:00`
+- Generated at: `2026-11-21T13:05:22.352346+00:00`
 - Mode: `sync`
 - Dry run flag: `False`
 - Source ref recorded in public tree: `false`
 - Manifest: `internal export manifest (not copied)`
-- Manifest SHA-256: `9fead700a6ef02be30400c1de1154441bce17378d7d2a2d705a871be8c46fe20`
+- Manifest SHA-256: `e9dea1db9d21822518b024a449de22023baf3be9825fa2df55fc3ff5295a18df`
 - Target: `public-tree-local-fixture`
 - Remote actions: none
 
@@ -89,7 +89,7 @@
 #### stdout tail
 
 ```text
-O] --- source:3.4.0:jar (default) @ ouroboros-root ---
+[INFO] --- source:3.4.0:jar (default) @ ouroboros-root ---
 [INFO] 
 [INFO] --- jacoco:0.8.15:report (report) @ ouroboros-root ---
 [INFO] Skipping JaCoCo execution due to missing execution data file.
@@ -135,13 +135,13 @@ O] --- source:3.4.0:jar (default) @ ouroboros-root ---
 [INFO] ------------------------------------------------------------------------
 [INFO] Reactor Summary for Ouroboros Root 2.0.0-rc.1-SNAPSHOT:
 [INFO] 
-[INFO] Ouroboros Root ..................................... SUCCESS [  1.831 s]
-[INFO] Ouroboros Data ..................................... SUCCESS [  0.234 s]
+[INFO] Ouroboros Root ..................................... SUCCESS [  1.843 s]
+[INFO] Ouroboros Data ..................................... SUCCESS [  0.217 s]
 [INFO] ------------------------------------------------------------------------
 [INFO] BUILD SUCCESS
 [INFO] ------------------------------------------------------------------------
-[INFO] Total time:  2.392 s
-[INFO] Finished at: 2026-11-19T19:22:11+08:00
+[INFO] Total time:  2.415 s
+[INFO] Finished at: 2026-11-21T21:04:55+08:00
 [INFO] ------------------------------------------------------------------------
 
 ```
@@ -161,7 +161,7 @@ NOTE: Picked up JDK_JAVA_OPTIONS: -javaagent:$HOME/.m2/repository/org/mockito/mo
 #### stdout tail
 
 ```text
-ED
+SABLED
 [INFO] PMD version: 7.17.0
 [INFO] Rendering content with org.apache.maven.skins:maven-fluido-skin:jar:2.0.0-M9 skin
 [INFO] 
@@ -181,28 +181,28 @@ ED
 [INFO] ------------------------------------------------------------------------
 [INFO] Reactor Summary for Ouroboros Root 2.0.0-rc.1-SNAPSHOT:
 [INFO] 
-[INFO] Ouroboros Root ..................................... SUCCESS [  1.676 s]
-[INFO] Ouroboros Util Bundle .............................. SUCCESS [ 11.796 s]
-[INFO] Ouroboros Common ................................... SUCCESS [  0.184 s]
-[INFO] common-error-code .................................. SUCCESS [  0.561 s]
-[INFO] common-exception ................................... SUCCESS [  0.517 s]
-[INFO] Ouroboros Exception Mapper ......................... SUCCESS [  0.379 s]
-[INFO] Ouroboros Common Service ........................... SUCCESS [  0.569 s]
-[INFO] Ouroboros Data ..................................... SUCCESS [  0.092 s]
-[INFO] Ouroboros Data Core ................................ SUCCESS [  6.789 s]
-[INFO] Ouroboros Data Typed Core .......................... SUCCESS [  0.567 s]
-[INFO] Ouroboros Data Plugins ............................. SUCCESS [  1.436 s]
-[INFO] Ouroboros Data Typed Meta Processor ................ SUCCESS [  0.336 s]
-[INFO] Ouroboros Data SQL Migration ....................... SUCCESS [  0.850 s]
-[INFO] Ouroboros Data SQL ................................. SUCCESS [  0.930 s]
-[INFO] ouroboros-data-builders ............................ SUCCESS [  0.352 s]
-[INFO] ouroboros-data-test-support ........................ SUCCESS [  0.597 s]
-[INFO] ouroboros-data-pkgen-coding ........................ SUCCESS [  0.358 s]
+[INFO] Ouroboros Root ..................................... SUCCESS [  1.621 s]
+[INFO] Ouroboros Util Bundle .............................. SUCCESS [  7.975 s]
+[INFO] Ouroboros Common ................................... SUCCESS [  0.119 s]
+[INFO] common-error-code .................................. SUCCESS [  0.377 s]
+[INFO] common-exception ................................... SUCCESS [  0.367 s]
+[INFO] Ouroboros Exception Mapper ......................... SUCCESS [  0.330 s]
+[INFO] Ouroboros Common Service ........................... SUCCESS [  0.412 s]
+[INFO] Ouroboros Data ..................................... SUCCESS [  0.089 s]
+[INFO] Ouroboros Data Core ................................ SUCCESS [  7.373 s]
+[INFO] Ouroboros Data Typed Core .......................... SUCCESS [  0.775 s]
+[INFO] Ouroboros Data Plugins ............................. SUCCESS [  1.350 s]
+[INFO] Ouroboros Data Typed Meta Processor ................ SUCCESS [  0.478 s]
+[INFO] Ouroboros Data SQL Migration ....................... SUCCESS [  1.024 s]
+[INFO] Ouroboros Data SQL ................................. SUCCESS [  1.081 s]
+[INFO] ouroboros-data-builders ............................ SUCCESS [  0.324 s]
+[INFO] ouroboros-data-test-support ........................ SUCCESS [  0.529 s]
+[INFO] ouroboros-data-pkgen-coding ........................ SUCCESS [  0.491 s]
 [INFO] ------------------------------------------------------------------------
 [INFO] BUILD SUCCESS
 [INFO] ------------------------------------------------------------------------
-[INFO] Total time:  28.459 s
-[INFO] Finished at: 2026-11-19T19:22:41+08:00
+[INFO] Total time:  25.098 s
+[INFO] Finished at: 2026-11-21T21:05:21+08:00
 [INFO] ------------------------------------------------------------------------
 
 ```

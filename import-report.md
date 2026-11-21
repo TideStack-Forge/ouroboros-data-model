@@ -3,13 +3,13 @@
 ## Summary
 
 - Status: `passed`
-- Generated at: `2026-11-19T11:23:08.814671+00:00`
+- Generated at: `2026-11-21T13:07:00.707693+00:00`
 - Public repo: `public-tree-local-fixture`
 - Public PR/ref: `fixture`
 - Public ref recorded in public tree: `false`
 - Target branch: `import-branch-dry-run`
 - Manifest: `internal export manifest (not copied)`
-- Manifest SHA-256: `9fead700a6ef02be30400c1de1154441bce17378d7d2a2d705a871be8c46fe20`
+- Manifest SHA-256: `e9dea1db9d21822518b024a449de22023baf3be9825fa2df55fc3ff5295a18df`
 - Dry run: `true`
 - Direct merge to master: `false`
 - Remote actions: none
